@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Keyboard xmlns:android="http://schemas.android.com/apk/res/android"
+    android:keyWidth="10%p"
+    android:keyHeight="55dp"
+    android:keyTextColor="@color/black">
+
+
+    <Row>
+    </Row>
+    <Row>
+    </Row>
+    <Row>
+        <Key android:codes="-5" android:keyLabel="DEL" android:keyEdgeFlags="right" android:keyWidth="15%" />
+    </Row>
+    <Row android:rowEdgeFlags="bottom">
+        <Key android:codes="32" android:keyLabel="SPACE" android:keyWidth="60%p" android:isRepeatable="true" android:horizontalGap="20%"/>
+        <Key android:codes="-4" android:keyLabel="DONE" android:keyWidth="20%p" android:keyEdgeFlags="right" />
+    </Row>
+</Keyboard>
