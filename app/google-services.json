@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "406051916433",
+    "project_id": "musclememorykeyboard",
+    "storage_bucket": "musclememorykeyboard.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:406051916433:android:ace39c56a4b283784e8d30",
+        "android_client_info": {
+          "package_name": "com.example.musclememorykeyboard"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "406051916433-hf42udaj9m4bv9issln261qeb0vlhk28.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBVVDq8b38PXmNgSiXlG3NmAz1WeeeXc2Y"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "406051916433-hf42udaj9m4bv9issln261qeb0vlhk28.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
