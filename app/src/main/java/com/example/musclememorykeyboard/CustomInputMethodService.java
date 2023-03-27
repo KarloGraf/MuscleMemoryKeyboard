@@ -7,6 +7,7 @@ import android.inputmethodservice.KeyboardView;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.inputmethod.InputConnection;
 
 public class CustomInputMethodService extends InputMethodService implements KeyboardView.OnKeyboardActionListener, View.OnTouchListener{
     public static final String KEYBOARD_TOUCH = "KeyboardTouched";
@@ -36,7 +37,23 @@ public class CustomInputMethodService extends InputMethodService implements Keyb
     }
 
     @Override
-    public void onKey(int i, int[] ints) {
+    public void onKey(int code, int[] ints) {
+        InputConnection inputConnection = getCurrentInputConnection();
+
+        if(getCurrentInputConnection() != null){
+            switch (code){
+                case Keyboard.KEYCODE_DONE:
+                    broadcastTouch(0,0,TouchTypes.OTHER);
+                    break;
+                case Keyboard.KEYCODE_DELETE:
+                    broadcastTouch(0,0,TouchTypes.DELETE);
+                    break;
+
+                default:
+                    broadcastTouch(0,0,TouchTypes.OTHER);
+                    break;
+            }
+        }
 
     }
 
@@ -65,23 +82,24 @@ public class CustomInputMethodService extends InputMethodService implements Keyb
 
     }
 
-    private void broadcastTouch(int x, int y) {
+    private void broadcastTouch(double x, double y, TouchTypes key) {
         Intent intent = new Intent(CustomInputMethodService.KEYBOARD_TOUCH);
-        intent.putExtra("x", x);
-        intent.putExtra("y", y);
-        sendBroadcast(intent);
+            intent.putExtra("KeyType", key);
+            intent.putExtra("x", x);
+            intent.putExtra("y", y);
+            sendBroadcast(intent);
         //LocalBroadcastManager.getInstance(SmartInputService.this).sendBroadcast(intent);
         Log.d("TOUCH_BROADCAST", "SENT!");
     }
 
     @Override
     public boolean onTouch(View view, MotionEvent motionEvent) {
-        int x = (int) motionEvent.getX();
-        int y = (int) motionEvent.getY();
+        double x = motionEvent.getX();
+        double y = motionEvent.getY();
         Log.d("TOUCH", "pressX: " + x + "\n" +
                 "pressY: " + y);
 
-        broadcastTouch(x, y);
+        broadcastTouch(x, y, TouchTypes.DEFAULT);
         return false;
     }
 }
