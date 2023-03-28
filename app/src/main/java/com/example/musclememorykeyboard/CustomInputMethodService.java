@@ -84,7 +84,7 @@ public class CustomInputMethodService extends InputMethodService implements Keyb
 
     private void broadcastTouch(double x, double y, TouchTypes key) {
         Intent intent = new Intent(CustomInputMethodService.KEYBOARD_TOUCH);
-            intent.putExtra("KeyType", key);
+            intent.putExtra("KeyType", key.name());
             intent.putExtra("x", x);
             intent.putExtra("y", y);
             sendBroadcast(intent);

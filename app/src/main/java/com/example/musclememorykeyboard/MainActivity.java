@@ -41,10 +41,10 @@ public class MainActivity extends AppCompatActivity {
                 double x = intent.getDoubleExtra("x", 0);
                 double y = intent.getDoubleExtra("y", 0);
                 Log.d("TOUCH_BROADCAST", "TOUCH RECEIVED!\nX: " + x + "\nY: " + y);
-                if(type.equals(TouchTypes.DEFAULT)){
+                if(type == TouchTypes.DEFAULT){
                     touchPoints.add(String.valueOf(x) + " , " + String.valueOf(y));
                 }
-                else if(type.equals(TouchTypes.DELETE)){
+                else if(type == TouchTypes.DELETE){
                     if(!touchPoints.isEmpty()){
                         touchPoints.remove(touchPoints.size()-1);
                     }
@@ -56,13 +56,10 @@ public class MainActivity extends AppCompatActivity {
             }
         };
 
-        upload.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Logger.writeLog(getApplicationContext(), touchPoints);
-                Logger.uploadLog(getApplicationContext(), storageReference, getParent());
+        upload.setOnClickListener(view -> {
+            Logger.writeLog(getApplicationContext(), touchPoints);
+            Logger.uploadLog(getApplicationContext(), storageReference, this);
 
-            }
         });
 
     }

@@ -69,7 +69,7 @@ public abstract class Logger {
         }
         catch(Exception e){
             //progressDialog.dismiss();
-            Toast.makeText(context, "Log upload failed! Reason: " + e, Toast.LENGTH_LONG).show();
+            Log.d("LOG_UPLOAD", "Log upload failed! Reason: " + e);
         }
     }
 }
