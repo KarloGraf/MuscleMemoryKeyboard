@@ -4,21 +4,28 @@ import android.content.Intent;
 import android.inputmethodservice.InputMethodService;
 import android.inputmethodservice.Keyboard;
 import android.inputmethodservice.KeyboardView;
+import android.os.Binder;
+import android.os.IBinder;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputConnection;
+import android.widget.Toast;
+
+import java.util.List;
 
 public class CustomInputMethodService extends InputMethodService implements KeyboardView.OnKeyboardActionListener, View.OnTouchListener{
     public static final String KEYBOARD_TOUCH = "KeyboardTouched";
+    public static final String KEYBOARD_OPENED = "KeyboardOpened";
 
     private KeyboardView keyboardView;
-
+    Keyboard keyboard;
 
     @Override
     public View onCreateInputView(){
         keyboardView = (KeyboardView) getLayoutInflater().inflate(R.layout.keyboard_view, null);
-        Keyboard keyboard = new Keyboard(this, R.xml.keys_layout);
+        keyboard = new Keyboard(this, R.xml.keys_layout);
         keyboardView.setKeyboard(keyboard);
         keyboardView.setPreviewEnabled(false);
         keyboardView.setOnKeyboardActionListener(this);
@@ -33,6 +40,17 @@ public class CustomInputMethodService extends InputMethodService implements Keyb
 
     @Override
     public void onRelease(int i) {
+
+    }
+
+
+    @Override
+    public void onStartInputView(EditorInfo attribute, boolean restarting) {
+        Intent intent = new Intent(CustomInputMethodService.KEYBOARD_OPENED);
+        intent.putExtra("Random_value","42");
+        sendBroadcast(intent);
+        Log.d("KEYBOARD_OPEN_BROADCAST", "SENT!");
+        super.onStartInputView(attribute, restarting);
 
     }
 
@@ -56,6 +74,7 @@ public class CustomInputMethodService extends InputMethodService implements Keyb
         }
 
     }
+
 
     @Override
     public void onText(CharSequence charSequence) {
@@ -84,10 +103,10 @@ public class CustomInputMethodService extends InputMethodService implements Keyb
 
     private void broadcastTouch(double x, double y, TouchTypes key) {
         Intent intent = new Intent(CustomInputMethodService.KEYBOARD_TOUCH);
-            intent.putExtra("KeyType", key.name());
-            intent.putExtra("x", x);
-            intent.putExtra("y", y);
-            sendBroadcast(intent);
+        intent.putExtra("KeyType", key.name());
+        intent.putExtra("x", x);
+        intent.putExtra("y", y);
+        sendBroadcast(intent);
         //LocalBroadcastManager.getInstance(SmartInputService.this).sendBroadcast(intent);
         Log.d("TOUCH_BROADCAST", "SENT!");
     }
@@ -102,4 +121,5 @@ public class CustomInputMethodService extends InputMethodService implements Keyb
         broadcastTouch(x, y, TouchTypes.DEFAULT);
         return false;
     }
+
 }
