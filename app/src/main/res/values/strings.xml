@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">MuscleMemoryKeyboard</string>
+    <dimen name="key_height">55dp</dimen>
 </resources>

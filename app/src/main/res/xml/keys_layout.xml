@@ -10,10 +10,11 @@
     <Row>
     </Row>
     <Row>
-        <Key android:codes="-5" android:keyLabel="DEL" android:keyEdgeFlags="right" android:keyWidth="15%"/>
+        <Key android:codes="-1" android:keyLabel="CAPS" android:keyEdgeFlags="left" android:keyWidth="15%" />
+        <Key android:codes="-5" android:keyLabel="DEL" android:horizontalGap="70%" android:keyEdgeFlags="right" android:keyWidth="15%"/>
     </Row>
     <Row android:rowEdgeFlags="bottom">
-        <Key android:codes="32" android:keyLabel="SPACE" android:keyWidth="60%p" android:isRepeatable="true" android:horizontalGap="20%"/>
+        <Key android:codes="-7" android:keyLabel="SPACE" android:keyWidth="60%p" android:isRepeatable="true" android:horizontalGap="20%"/>
         <Key android:codes="-4" android:keyLabel="DONE" android:keyWidth="20%p" android:keyEdgeFlags="right" />
     </Row>
 </Keyboard>
