@@ -57,10 +57,13 @@ public class MainActivity extends AppCompatActivity implements SpellCheckerSessi
     private FirebaseStorage storage;
     private StorageReference storageReference;
     EditText textInput;
+    StringBuilder sb = new StringBuilder();
     boolean started = false;
     static double keyWidth = 0d;
     static float keyHeight = 0f;
+    double dpi = 0;
     String[] wordList = new String[10000];
+    Double[] valueList = new Double[10000];
     ArrayList<CustomKey> keyList;
     ArrayList<String> touchPoints = new ArrayList<>();
     ArrayList<HashMap<String,Double>> distanceMapList= new ArrayList<>();
@@ -79,7 +82,7 @@ public class MainActivity extends AppCompatActivity implements SpellCheckerSessi
         DisplayMetrics displayMetrics = new DisplayMetrics();
         getWindowManager().getDefaultDisplay().getMetrics(displayMetrics);
         double width = displayMetrics.widthPixels;
-        double dpi = displayMetrics.densityDpi;
+        dpi = displayMetrics.densityDpi;
         Toast.makeText(this, "The dpi is: "+dpi, Toast.LENGTH_SHORT).show();
         keyWidth = width /10;
         String miss = "misspeled";
@@ -87,6 +90,7 @@ public class MainActivity extends AppCompatActivity implements SpellCheckerSessi
         //float dip = 55f;
         Resources r = getResources();
         keyHeight = r.getDimensionPixelSize(R.dimen.key_height);
+        double height = 4*keyHeight;
 
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
@@ -94,16 +98,23 @@ public class MainActivity extends AppCompatActivity implements SpellCheckerSessi
         Button upload = findViewById(R.id.buttonUpload);
         Button start = findViewById(R.id.buttonStart);
         start.setOnClickListener(view -> {
-            if(started){
+            if(!started){
                 start.setText("STOP");
             }
             else{
                 start.setText("START");
             }
             started = !started;
+
+            //Resetting everything
+            touchPoints.clear();
+            distanceMapList.clear();
+            sb.setLength(0);
             try {
-                Log.d("SPELLCHECK SUPPORTED: " ,String.valueOf(isSentenceSpellCheckSupported()));
-                spellCheckerSession.getSuggestions(new TextInfo(miss), 3);
+                Log.d("SPELLCHECK SUPPORTED:" ,String.valueOf(isSentenceSpellCheckSupported()));
+                TextInfo[] txt = new TextInfo[1];
+                txt[0] = new TextInfo("Dogs do not liek to siwm");
+                spellCheckerSession.getSentenceSuggestions(txt, 3);
             }
             catch (Exception ex){
                 ex.printStackTrace();
@@ -113,6 +124,7 @@ public class MainActivity extends AppCompatActivity implements SpellCheckerSessi
         Context main = this;
 
         loadWordList();
+        loadFrequencyList();
 
         textInput = findViewById(R.id.editTextPhrase);
         textInput.setOnFocusChangeListener(new View.OnFocusChangeListener() {
@@ -133,42 +145,67 @@ public class MainActivity extends AppCompatActivity implements SpellCheckerSessi
             public void onReceive(Context context, Intent intent) {
                 if (intent.getAction() != null) {
                     if (intent.getAction().equals(CustomInputMethodService.KEYBOARD_TOUCH)) {
-                        TouchTypes type = TouchTypes.valueOf(intent.getStringExtra("KeyType"));
-                        double x = intent.getDoubleExtra("x", 0);
-                        double y = intent.getDoubleExtra("y", 0);
-                        Log.d("TOUCH_BROADCAST", "TOUCH RECEIVED! X: " + x + " Y: " + y + "TYPE: " + type.toString());
-                        if (type == TouchTypes.DEFAULT) {
-                            touchPoints.add(String.valueOf(x) + " , " + String.valueOf(y));
-                            if (keyList != null)
-                                closestKey(keyList,x,y);
-                        } else if (type == TouchTypes.DELETE) {
-                            if (!touchPoints.isEmpty()) {
-                                touchPoints.remove(touchPoints.size() - 1);
-                                touchPoints.remove(touchPoints.size() - 1);
+                        if (started) {
+                            String type = intent.getStringExtra("KeyType");
+                            double x = intent.getDoubleExtra("x", 0);
+                            double y = intent.getDoubleExtra("y", 0);
+                            Log.d("TOUCH_BROADCAST", "TOUCH RECEIVED! X: " + x + " Y: " + y + "TYPE: " + type.toString());
+                            switch (type) {
+                                case CustomInputMethodService.KEY_OTHER:
+                                    if (y >= height - keyHeight) {
+                                        Log.d("TOUCH_BROADCAST", "BOTTOM ROW PRESSED");
+                                    } else if (y >= height - 2 * keyHeight && x <= 1.5 * keyWidth) {
+                                        Log.d("TOUCH_BROADCAST", "CAPS PRESSED");
+                                    } else if (y >= height - 2 * keyHeight && x >= width - 1.5 * keyWidth) {
+                                        Log.d("TOUCH_BROADCAST", "DELETE PRESSED");
+                                    } else {
+                                        touchPoints.add(String.valueOf(x) + " , " + String.valueOf(y));
+                                        if (keyList != null)
+                                            closestKey(keyList, x, y);
+                                    }
+                                    break;
+                                case CustomInputMethodService.KEY_DELETE:
+                                    if (!touchPoints.isEmpty()) {
+                                        touchPoints.remove(touchPoints.size() - 1);
+                                    }
+                                    if (!distanceMapList.isEmpty()) {
+                                        distanceMapList.remove(distanceMapList.size() - 1);
+                                    }
+                                    if (sb.length() > 0) {
+                                        sb.deleteCharAt(sb.length() - 1);
+                                    }
+                                    break;
+                                case CustomInputMethodService.KEY_DONE:
+                                    if (touchPoints.size() > 0) {
+                                        TextInfo[] txt = new TextInfo[1];
+                                        txt[0] = new TextInfo(sb.toString());
+                                        spellCheckerSession.getSentenceSuggestions(txt, 3);
+                                        closestWord();
+                                    } else {
+                                        sb.setLength(0);
+                                        touchPoints.clear();
+                                        distanceMapList.clear();
+                                    }
+                                    //CALL word detection
+                                    break;
+                                case CustomInputMethodService.KEY_SPACE:
+                                    closestWord();
+                                    touchPoints.add("SPACE");
+                                    break;
+                                default:
+                                    //DEFAULT CODE
+                                    break;
                             }
-                        } else if(type == TouchTypes.OTHER){
-                            touchPoints.remove(touchPoints.size() - 1);
-                            distanceMapList.remove(distanceMapList.size()-1);
-                            if(touchPoints.size() == 4){
-                                closestWord();
-                            }
-                            touchPoints.clear();
-                            //CALL word detection
                         }
-                        else {
-                            touchPoints.remove(touchPoints.size() - 1);
-                            touchPoints.add("SPACE");
-                        }
-                    }
-                    else if(intent.getAction().equals(CustomInputMethodService.KEYBOARD_OPENED)){
+                    }else if (intent.getAction().equals(CustomInputMethodService.KEYBOARD_OPENED)) {
 
-                        keyList = intent.getParcelableArrayListExtra("CustomKeyList");
-                        Log.d("KEYBOARD_OPEN_BROADCAST", keyList.toString());
-                        Log.d("KEYBOARD_OPEN_BROADCAST","RECEIVED!");
+                            keyList = intent.getParcelableArrayListExtra("CustomKeyList");
+                            Log.d("KEYBOARD_OPEN_BROADCAST", keyList.toString());
+                            Log.d("KEYBOARD_OPEN_BROADCAST", "RECEIVED!");
+                        }
                     }
                 }
 
-            }
         };
 
 
@@ -205,11 +242,30 @@ public class MainActivity extends AppCompatActivity implements SpellCheckerSessi
 
     public void closestKey(List<CustomKey> keys, double x, double y){
         HashMap <String, Double> distanceLabelMap = new HashMap<>();
+        String letter = "";
+        double highest = 0;
+        double sum = 0;
         for (CustomKey key:
              keys) {
-            distanceLabelMap.put(key.getLabel(), gaussianDist(key.distanceFrom(x,y)));
+            double val = gaussianDist(key.distanceFrom(x,y));
+            sum += val;
+            if(val > highest){
+                highest = val;
+                letter = key.getLabel();
+            }
+            distanceLabelMap.put(key.getLabel(), val);
         }
-        distanceMapList.add(distanceLabelMap);
+        //Normalization
+        HashMap <String, Double> normalizedMap = new HashMap<>();
+        for (Map.Entry<String,Double> key:
+             distanceLabelMap.entrySet()) {
+            double normal = key.getValue()/sum;
+            normalizedMap.put(key.getKey(), normal);
+        }
+        Log.d("NORMALIZED VALUES:", normalizedMap.toString());
+        distanceMapList.add(normalizedMap);
+        sb.append(letter);
+        Log.d("STRING BUILDER APPENDED: ", sb.toString());
         /*Log.d("CLOSEST KEY: ", distanceLabelMap.get(distanceLabelMap.lastKey()) + "  VALUE: " + distanceLabelMap.lastKey().toString());
         Log.d("CLOSEST KEY:", distanceLabelMap.toString());*/
 
@@ -236,10 +292,32 @@ public class MainActivity extends AppCompatActivity implements SpellCheckerSessi
 
     }
 
+    public void loadFrequencyList(){
+        BufferedReader reader;
+        String filename = "valuesOnly.txt";
+        int i = 0;
+        try{
+            InputStream file = getAssets().open(filename);
+            reader = new BufferedReader(new InputStreamReader(file));
+            String line = reader.readLine();
+            while(line != null){
+                Double value = Double.valueOf(line);
+                valueList[i] = value;
+                i++;
+                line = reader.readLine();
+            }
+        } catch (IOException ioe){
+            Log.d("READING WORDLIST", "Failure");
+            ioe.printStackTrace();
+        }
+        Log.d("READING WORDLIST", "Success");
+
+    }
+
     public double gaussianDist(double dist){
         double mean = 0;
-        double var_in_mm = 8;
-        double variance = var_in_mm * 0.03937 * keyHeight;
+        double var_in_mm = 6;
+        double variance = var_in_mm * 0.03937 * dpi;
         double result;
         result = 1/(variance*Math.sqrt(2*Math.PI))*Math.pow(Math.E,-0.5*Math.pow((dist-mean)/variance,2));
         return result;
@@ -247,18 +325,25 @@ public class MainActivity extends AppCompatActivity implements SpellCheckerSessi
 
     public void closestWord(){
         TreeMap<Double, String> wordsSorted= new TreeMap<>();
+        Log.d("WORD LENGTH", String.valueOf(distanceMapList.size()));
+        double maxVal = 23135851162D;
+        double weight = 0.2;
+        int counter = 0;
+        int wordLength = distanceMapList.size();
         try {
             for (String tmpWord :
                     wordList) {
 
                 double totalDist = 0;
-                if (tmpWord != null && tmpWord.length() == distanceMapList.size()) {
-                    Log.d("WORDS", tmpWord);
+                if (tmpWord != null && tmpWord.length() == wordLength) {
+                    //Log.d("WORDS", tmpWord);
                     for (int i = 0; i < distanceMapList.size(); i++) {
                         totalDist += distanceMapList.get(i).get(String.valueOf(tmpWord.charAt(i)));
                     }
+                    totalDist += (valueList[counter]/maxVal) * weight * wordLength;
                     wordsSorted.put(totalDist, tmpWord);
                 }
+                counter++;
             }
             distanceMapList.clear();
             Log.d("CLOSEST WORD", wordsSorted.get(wordsSorted.lastKey()));
@@ -271,7 +356,10 @@ public class MainActivity extends AppCompatActivity implements SpellCheckerSessi
 
     @Override
     public void onGetSuggestions(SuggestionsInfo[] suggestionsInfos) {
+        Log.d("SUGGESTIONS","CALLED");
+        sb.setLength(0);
         if(suggestionsInfos != null){
+            Log.d("SUGGESTIONS","NOT NULL");
             for (SuggestionsInfo info : suggestionsInfos){
                 int sugCount = info.getSuggestionsCount();
                 for (int i = 0; i<sugCount;i++){
@@ -285,7 +373,23 @@ public class MainActivity extends AppCompatActivity implements SpellCheckerSessi
 
     @Override
     public void onGetSentenceSuggestions(SentenceSuggestionsInfo[] sentenceSuggestionsInfos) {
-
+        Log.d("SENTENCE SUGGESTIONS","CALLED");
+        sb.setLength(0);
+        if(sentenceSuggestionsInfos != null){
+            Log.d("SENTENCE SUGGESTIONS","NOT NULL");
+            for (SentenceSuggestionsInfo info : sentenceSuggestionsInfos){
+                int sugCount = info.getSuggestionsCount();
+                Log.d("SENTENCE SUGGESTIONS","COUNT " + String.valueOf(sugCount));
+                for (int i = 0; i<sugCount;i++){
+                    SuggestionsInfo sugInfo = info.getSuggestionsInfoAt(i);
+                    Log.d("SUGGESTIONS","COUNT " + String.valueOf(sugInfo.getSuggestionsCount()));
+                    for(int j = 0; j < sugInfo.getSuggestionsCount(); j++){
+                        String sug = sugInfo.getSuggestionAt(j);
+                        Log.d("SUGGESTIONS: ", sug);
+                    }
+                }
+            }
+        }
     }
 
     private boolean isSentenceSpellCheckSupported() {

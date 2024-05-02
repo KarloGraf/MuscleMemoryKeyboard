@@ -8,6 +8,7 @@ import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputConnection;
 
 import java.util.ArrayList;
@@ -15,6 +16,12 @@ import java.util.ArrayList;
 public class CustomInputMethodService extends InputMethodService implements KeyboardView.OnKeyboardActionListener, View.OnTouchListener{
     public static final String KEYBOARD_TOUCH = "KeyboardTouched";
     public static final String KEYBOARD_OPENED = "KeyboardOpened";
+    public static final String KEY_DELETE = "Delete";
+    public static final String KEY_SPACE = "Space";
+    public static final String KEY_DONE = "Done";
+    public static final String KEY_OTHER = "Other";
+
+
 
 
     private KeyboardView keyboardView;
@@ -63,14 +70,17 @@ public class CustomInputMethodService extends InputMethodService implements Keyb
 
         if(getCurrentInputConnection() != null){
             switch (code){
-                case Keyboard.KEYCODE_DONE:
-                    broadcastTouch(0,0,TouchTypes.OTHER);
+                case -4:
+                    broadcastTouch(0,0,KEY_DONE);
                     break;
-                case Keyboard.KEYCODE_DELETE:
-                    broadcastTouch(0,0,TouchTypes.DELETE);
+                case -5:
+                    broadcastTouch(0,0,KEY_DELETE);
+                    break;
+                case -7:
+                    broadcastTouch(0,0,KEY_SPACE);
                     break;
                 default:
-                    broadcastTouch(0,0,TouchTypes.DEFAULT);
+                    broadcastTouch(0,0,KEY_OTHER);
                     break;
             }
         }
@@ -91,7 +101,7 @@ public class CustomInputMethodService extends InputMethodService implements Keyb
     @Override
     public void swipeRight() {
         Log.d("SWIPE", "RIGHT SWIPE DETECTED!");
-        if(invis) {
+        /*if(invis) {
             keyboard = new Keyboard(this, R.xml.normal_keys_layout);
             broadcastOpen(keyboard);
         }
@@ -99,7 +109,7 @@ public class CustomInputMethodService extends InputMethodService implements Keyb
             keyboard = new Keyboard(this, R.xml.keys_layout);
         }
         invis = !invis;
-        keyboardView.setKeyboard(keyboard);
+        keyboardView.setKeyboard(keyboard);*/
     }
 
     @Override
@@ -112,9 +122,9 @@ public class CustomInputMethodService extends InputMethodService implements Keyb
 
     }
 
-    private void broadcastTouch(double x, double y, TouchTypes key) {
+    private void broadcastTouch(double x, double y, String key) {
         Intent intent = new Intent(CustomInputMethodService.KEYBOARD_TOUCH);
-        intent.putExtra("KeyType", key.name());
+        intent.putExtra("KeyType", key);
         intent.putExtra("x", x);
         intent.putExtra("y", y);
         sendBroadcast(intent);
@@ -134,7 +144,7 @@ public class CustomInputMethodService extends InputMethodService implements Keyb
                 double y = motionEvent.getY();
                 Log.d("TOUCH", "pressX: " + x + "\n" +
                         "pressY: " + y);
-                broadcastTouch(x, y, TouchTypes.DEFAULT);
+                broadcastTouch(x, y, KEY_OTHER);
                 break;
             case MotionEvent.ACTION_MOVE:
                 Log.d("TouchEvent", "ACTION_MOVE");
@@ -143,4 +153,10 @@ public class CustomInputMethodService extends InputMethodService implements Keyb
         return false;
     }
 
+    @Override
+    public void onStartInputView(EditorInfo info, boolean restarting) {
+        Keyboard fullKeyboard = new Keyboard(this, R.xml.normal_keys_layout);
+        broadcastOpen(fullKeyboard);
+        super.onStartInputView(info, restarting);
+    }
 }
