@@ -80,7 +80,7 @@ public class CustomInputMethodService extends InputMethodService implements Keyb
                     broadcastTouch(0,0,KEY_SPACE);
                     break;
                 default:
-                    broadcastTouch(0,0,KEY_OTHER);
+                    //broadcastTouch(0,0,KEY_OTHER);
                     break;
             }
         }
@@ -101,15 +101,14 @@ public class CustomInputMethodService extends InputMethodService implements Keyb
     @Override
     public void swipeRight() {
         Log.d("SWIPE", "RIGHT SWIPE DETECTED!");
-        /*if(invis) {
-            keyboard = new Keyboard(this, R.xml.normal_keys_layout);
-            broadcastOpen(keyboard);
+        if(invis) {
+            keyboard = new Keyboard(this, R.xml.blank_keys_layout);
         }
         else{
             keyboard = new Keyboard(this, R.xml.keys_layout);
         }
         invis = !invis;
-        keyboardView.setKeyboard(keyboard);*/
+        keyboardView.setKeyboard(keyboard);
     }
 
     @Override
@@ -134,14 +133,21 @@ public class CustomInputMethodService extends InputMethodService implements Keyb
 
     @Override
     public boolean onTouch(View view, MotionEvent motionEvent) {
+        int count = motionEvent.getPointerCount();
+        double x = motionEvent.getX();
+        double y = motionEvent.getY();
         switch (motionEvent.getActionMasked()){
             case MotionEvent.ACTION_DOWN:
                 Log.d("TouchEvent", "ACTION_DOWN");
                 break;
             case MotionEvent.ACTION_UP:
                 Log.d("TouchEvent", "ACTION_UP");
-                double x = motionEvent.getX();
-                double y = motionEvent.getY();
+                Log.d("TOUCH", "pressX: " + x + "\n" +
+                        "pressY: " + y);
+                broadcastTouch(x, y, KEY_OTHER);
+                break;
+            case MotionEvent.ACTION_POINTER_UP:
+                Log.d("TouchEvent", "ACTION_POINTER_UP");
                 Log.d("TOUCH", "pressX: " + x + "\n" +
                         "pressY: " + y);
                 broadcastTouch(x, y, KEY_OTHER);
@@ -149,6 +155,7 @@ public class CustomInputMethodService extends InputMethodService implements Keyb
             case MotionEvent.ACTION_MOVE:
                 Log.d("TouchEvent", "ACTION_MOVE");
                 break;
+
         }
         return false;
     }

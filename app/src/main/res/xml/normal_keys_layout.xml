@@ -39,8 +39,8 @@
         <Key android:codes="-5" android:keyLabel="DEL" android:keyEdgeFlags="right" android:keyWidth="15%" />
     </Row>
     <Row android:rowEdgeFlags="bottom">
-        <Key android:codes="-9" android:keyLabel="," android:keyWidth="10%p"  android:keyEdgeFlags="left"/>
-        <Key android:codes="-8" android:keyLabel="/" android:keyWidth="10%p" />
+        <Key android:codes="-8" android:keyLabel="," android:keyWidth="10%p"  android:keyEdgeFlags="left"/>
+        <Key android:codes="-9" android:keyLabel="/" android:keyWidth="10%p" />
         <Key android:codes="-7" android:keyLabel="SPACE" android:keyWidth="60%p" android:isRepeatable="true"/>
         <Key android:codes="-4" android:keyLabel="DONE" android:keyWidth="20%p" android:keyEdgeFlags="right" />
     </Row>

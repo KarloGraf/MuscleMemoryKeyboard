@@ -1,7 +1,11 @@
 package com.example.musclememorykeyboard;
 
+import androidx.activity.result.ActivityResultLauncher;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.Toolbar;
 
+import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
@@ -13,10 +17,13 @@ import android.inputmethodservice.InputMethodService;
 import android.inputmethodservice.Keyboard;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Debug;
 import android.os.IBinder;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.util.TypedValue;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.inputmethod.InputMethodInfo;
 import android.view.inputmethod.InputMethodManager;
@@ -43,6 +50,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.lang.reflect.Array;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -54,28 +62,38 @@ import java.util.TreeMap;
 public class MainActivity extends AppCompatActivity implements SpellCheckerSession.SpellCheckerSessionListener {
 
     private BroadcastReceiver touchReceiver;
+    private static final int ALPHABET_SIZE = 26;
     private FirebaseStorage storage;
     private StorageReference storageReference;
     EditText textInput;
-    StringBuilder sb = new StringBuilder();
+    TextView stringDistText;
+    TextView gaussDistText;
+    StringBuilder typedSentence = new StringBuilder();
+    StringBuilder typedWord = new StringBuilder();
     boolean started = false;
     static double keyWidth = 0d;
     static float keyHeight = 0f;
     double dpi = 0;
-    String[] wordList = new String[10000];
-    Double[] valueList = new Double[10000];
+    String[] wordList = new String[30000];
+    Double[] valueList = new Double[30000];
     ArrayList<CustomKey> keyList;
     ArrayList<String> touchPoints = new ArrayList<>();
-    ArrayList<HashMap<String,Double>> distanceMapList= new ArrayList<>();
-    String[] fourLetter = {"frog", "cake", "make", "lake", "rake", "read", "glow", "book", "rock", "dock", "four", "play", "game", "star", "door"};
-
+    double[][] keyDistances = new double[ALPHABET_SIZE][ALPHABET_SIZE];
+    ArrayList<double[]> distanceMapList = new ArrayList<>();
 
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+
+        Toolbar myToolbar = findViewById(R.id.myToolbar);
+        setSupportActionBar(myToolbar);
+        myToolbar.showOverflowMenu();
+
         TextServicesManager textServicesManager = (TextServicesManager) getSystemService(TEXT_SERVICES_MANAGER_SERVICE);
 
-        Log.d("SPELLCHECKER SERVICE", String.valueOf(textServicesManager.isSpellCheckerEnabled()));
+        //Log.d("SPELLCHECKER SERVICE", String.valueOf(textServicesManager.isSpellCheckerEnabled()));
         SpellCheckerSession spellCheckerSession = textServicesManager.newSpellCheckerSession(null,Locale.ENGLISH,this ,false);
 
 
@@ -83,7 +101,7 @@ public class MainActivity extends AppCompatActivity implements SpellCheckerSessi
         getWindowManager().getDefaultDisplay().getMetrics(displayMetrics);
         double width = displayMetrics.widthPixels;
         dpi = displayMetrics.densityDpi;
-        Toast.makeText(this, "The dpi is: "+dpi, Toast.LENGTH_SHORT).show();
+        //Toast.makeText(this, "The dpi is: "+dpi, Toast.LENGTH_SHORT).show();
         keyWidth = width /10;
         String miss = "misspeled";
 
@@ -92,11 +110,12 @@ public class MainActivity extends AppCompatActivity implements SpellCheckerSessi
         keyHeight = r.getDimensionPixelSize(R.dimen.key_height);
         double height = 4*keyHeight;
 
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
-
         Button upload = findViewById(R.id.buttonUpload);
         Button start = findViewById(R.id.buttonStart);
+
+        gaussDistText = findViewById(R.id.gaussText);
+        stringDistText = findViewById(R.id.lichText);
+
         start.setOnClickListener(view -> {
             if(!started){
                 start.setText("STOP");
@@ -109,12 +128,13 @@ public class MainActivity extends AppCompatActivity implements SpellCheckerSessi
             //Resetting everything
             touchPoints.clear();
             distanceMapList.clear();
-            sb.setLength(0);
+            typedSentence.setLength(0);
+            typedWord.setLength(0);
             try {
                 Log.d("SPELLCHECK SUPPORTED:" ,String.valueOf(isSentenceSpellCheckSupported()));
                 TextInfo[] txt = new TextInfo[1];
                 txt[0] = new TextInfo("Dogs do not liek to siwm");
-                spellCheckerSession.getSentenceSuggestions(txt, 3);
+                //spellCheckerSession.getSentenceSuggestions(txt, 3);
             }
             catch (Exception ex){
                 ex.printStackTrace();
@@ -171,26 +191,32 @@ public class MainActivity extends AppCompatActivity implements SpellCheckerSessi
                                     if (!distanceMapList.isEmpty()) {
                                         distanceMapList.remove(distanceMapList.size() - 1);
                                     }
-                                    if (sb.length() > 0) {
-                                        sb.deleteCharAt(sb.length() - 1);
+                                    if (typedSentence.length() > 0) {
+                                        typedSentence.deleteCharAt(typedSentence.length() - 1);
+                                    }
+                                    if (typedWord.length() > 0) {
+                                        typedWord.deleteCharAt(typedWord.length() - 1);
                                     }
                                     break;
                                 case CustomInputMethodService.KEY_DONE:
                                     if (touchPoints.size() > 0) {
                                         TextInfo[] txt = new TextInfo[1];
-                                        txt[0] = new TextInfo(sb.toString());
+                                        txt[0] = new TextInfo(typedSentence.toString());
                                         spellCheckerSession.getSentenceSuggestions(txt, 3);
                                         closestWord();
                                     } else {
-                                        sb.setLength(0);
+                                        typedSentence.setLength(0);
+                                        typedWord.setLength(0);
                                         touchPoints.clear();
                                         distanceMapList.clear();
                                     }
                                     //CALL word detection
                                     break;
                                 case CustomInputMethodService.KEY_SPACE:
-                                    closestWord();
-                                    touchPoints.add("SPACE");
+                                    if(touchPoints.size() > 0){
+                                        closestWord();
+                                        touchPoints.add("SPACE");
+                                    }
                                     break;
                                 default:
                                     //DEFAULT CODE
@@ -200,6 +226,7 @@ public class MainActivity extends AppCompatActivity implements SpellCheckerSessi
                     }else if (intent.getAction().equals(CustomInputMethodService.KEYBOARD_OPENED)) {
 
                             keyList = intent.getParcelableArrayListExtra("CustomKeyList");
+                            calculateKeyDistances(keyList);
                             Log.d("KEYBOARD_OPEN_BROADCAST", keyList.toString());
                             Log.d("KEYBOARD_OPEN_BROADCAST", "RECEIVED!");
                         }
@@ -216,6 +243,39 @@ public class MainActivity extends AppCompatActivity implements SpellCheckerSessi
 
         });
 
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.toolbar, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        String TAG = "TOOLBAR MENU";
+        switch (item.getItemId()) {
+            case R.id.logSettings:
+                Log.d(TAG, "onOptionsItemSelected: LOG SETTINGS");
+                return true;
+
+            case R.id.sessionSettings:
+                Intent myIntent = new Intent(MainActivity.this, SessionSettingsActivity.class);
+                MainActivity.this.startActivity(myIntent);
+                Log.d(TAG, "onOptionsItemSelected: SESSION SETTINGS");
+                return true;
+
+            case R.id.initTestSession:
+                Log.d(TAG, "onOptionsItemSelected: SESSION INIT");
+                return true;
+
+            case R.id.bringUp:
+                InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+                imm.toggleSoftInput(InputMethodManager.SHOW_FORCED, 0);
+
+            default:
+                return super.onOptionsItemSelected(item);
+        }
     }
 
     public static double getKeyWidth(){
@@ -241,7 +301,7 @@ public class MainActivity extends AppCompatActivity implements SpellCheckerSessi
     }
 
     public void closestKey(List<CustomKey> keys, double x, double y){
-        HashMap <String, Double> distanceLabelMap = new HashMap<>();
+        double[] tmpList = new double[ALPHABET_SIZE];
         String letter = "";
         double highest = 0;
         double sum = 0;
@@ -253,27 +313,22 @@ public class MainActivity extends AppCompatActivity implements SpellCheckerSessi
                 highest = val;
                 letter = key.getLabel();
             }
-            distanceLabelMap.put(key.getLabel(), val);
+            Log.d("HIGHEST GAUSS VALUE", String.valueOf(val) + " " + key.getLabel());
+            tmpList[key.getLabel().charAt(0) - 'a'] = val;
         }
-        //Normalization
-        HashMap <String, Double> normalizedMap = new HashMap<>();
-        for (Map.Entry<String,Double> key:
-             distanceLabelMap.entrySet()) {
-            double normal = key.getValue()/sum;
-            normalizedMap.put(key.getKey(), normal);
+        for(int i = 0; i < ALPHABET_SIZE; i++){
+            tmpList[i] = tmpList[i]/sum;
         }
-        Log.d("NORMALIZED VALUES:", normalizedMap.toString());
-        distanceMapList.add(normalizedMap);
-        sb.append(letter);
-        Log.d("STRING BUILDER APPENDED: ", sb.toString());
-        /*Log.d("CLOSEST KEY: ", distanceLabelMap.get(distanceLabelMap.lastKey()) + "  VALUE: " + distanceLabelMap.lastKey().toString());
-        Log.d("CLOSEST KEY:", distanceLabelMap.toString());*/
-
+        distanceMapList.add(tmpList);
+        typedSentence.append(letter);
+        typedWord.append(letter);
+        Log.d("STRING BUILDER SENTENCE APPENDED: ", typedSentence.toString());
+        Log.d("STRING BUILDER WORD APPENDED: ", typedSentence.toString());
     }
 
     public void loadWordList(){
         BufferedReader reader;
-        String filename = "google-10000-english.txt";
+        String filename = "30kFixed.txt";
         int i = 0;
         try{
             InputStream file = getAssets().open(filename);
@@ -294,7 +349,7 @@ public class MainActivity extends AppCompatActivity implements SpellCheckerSessi
 
     public void loadFrequencyList(){
         BufferedReader reader;
-        String filename = "valuesOnly.txt";
+        String filename = "30kValuesOnly.txt";
         int i = 0;
         try{
             InputStream file = getAssets().open(filename);
@@ -307,19 +362,20 @@ public class MainActivity extends AppCompatActivity implements SpellCheckerSessi
                 line = reader.readLine();
             }
         } catch (IOException ioe){
-            Log.d("READING WORDLIST", "Failure");
+            Log.d("READING FREQLIST", "Failure");
             ioe.printStackTrace();
         }
-        Log.d("READING WORDLIST", "Success");
+        Log.d("READING FREQLIST", "Success");
 
     }
 
     public double gaussianDist(double dist){
         double mean = 0;
-        double var_in_mm = 6;
+        double var_in_mm = 7;
         double variance = var_in_mm * 0.03937 * dpi;
+        //Log.d("Variance", String.valueOf(variance));
         double result;
-        result = 1/(variance*Math.sqrt(2*Math.PI))*Math.pow(Math.E,-0.5*Math.pow((dist-mean)/variance,2));
+        result = (1/(variance*Math.sqrt(2*Math.PI)))*Math.pow(Math.E,-Math.pow((dist-mean),2)/(2*Math.pow(variance,2)));
         return result;
     }
 
@@ -327,26 +383,53 @@ public class MainActivity extends AppCompatActivity implements SpellCheckerSessi
         TreeMap<Double, String> wordsSorted= new TreeMap<>();
         Log.d("WORD LENGTH", String.valueOf(distanceMapList.size()));
         double maxVal = 23135851162D;
+        double maxLog = 10.3642;
+        double minLog = 5.901;
         double weight = 0.2;
         int counter = 0;
+        double minLenDist = 9999;
+        double wordFreq = 0;
         int wordLength = distanceMapList.size();
+        String currentWord = typedWord.toString();
+        String closestLenWord = "";
+
+        typedWord.setLength(0);
         try {
             for (String tmpWord :
                     wordList) {
 
                 double totalDist = 0;
+                if(!(Math.abs(tmpWord.length() - wordLength) >= 1)) {
+                    double tmpLevDist = calculateStringDistance(currentWord, tmpWord);
+                    if (tmpLevDist < minLenDist) {
+                        minLenDist = tmpLevDist;
+                        closestLenWord = tmpWord;
+                        wordFreq = valueList[counter];
+                    }
+                    //
+                    /*else if (tmpLevDist == minLenDist) {
+                        if (wordFreq < valueList[counter]) {
+                            minLenDist = tmpLevDist;
+                            closestLenWord = tmpWord;
+                            wordFreq = valueList[counter];
+                        }
+                    }*/
+                }
                 if (tmpWord != null && tmpWord.length() == wordLength) {
                     //Log.d("WORDS", tmpWord);
                     for (int i = 0; i < distanceMapList.size(); i++) {
-                        totalDist += distanceMapList.get(i).get(String.valueOf(tmpWord.charAt(i)));
+                        totalDist += distanceMapList.get(i)[(tmpWord.charAt(i))-'a'];
                     }
-                    totalDist += (valueList[counter]/maxVal) * weight * wordLength;
+                    totalDist *= 1 + ((Math.log(valueList[counter]) - minLog)/(maxLog - minLog) * weight);
                     wordsSorted.put(totalDist, tmpWord);
                 }
                 counter++;
             }
             distanceMapList.clear();
             Log.d("CLOSEST WORD", wordsSorted.get(wordsSorted.lastKey()));
+            gaussDistText.setText(wordsSorted.get(wordsSorted.lastKey()));
+            Log.d("CLOSEST WORD LEV DIST", closestLenWord + " Distance: " + minLenDist);
+            stringDistText.setText(closestLenWord);
         }
         catch(Exception ex){
             ex.printStackTrace();
@@ -357,7 +440,7 @@ public class MainActivity extends AppCompatActivity implements SpellCheckerSessi
     @Override
     public void onGetSuggestions(SuggestionsInfo[] suggestionsInfos) {
         Log.d("SUGGESTIONS","CALLED");
-        sb.setLength(0);
+        /*typedSentence.setLength(0);
         if(suggestionsInfos != null){
             Log.d("SUGGESTIONS","NOT NULL");
             for (SuggestionsInfo info : suggestionsInfos){
@@ -367,23 +450,24 @@ public class MainActivity extends AppCompatActivity implements SpellCheckerSessi
                     Log.d("SUGGESTIONS: ", sug);
                 }
             }
-        }
+        }*/
 
     }
 
     @Override
     public void onGetSentenceSuggestions(SentenceSuggestionsInfo[] sentenceSuggestionsInfos) {
         Log.d("SENTENCE SUGGESTIONS","CALLED");
-        sb.setLength(0);
+        typedSentence.setLength(0);
         if(sentenceSuggestionsInfos != null){
             Log.d("SENTENCE SUGGESTIONS","NOT NULL");
             for (SentenceSuggestionsInfo info : sentenceSuggestionsInfos){
-                int sugCount = info.getSuggestionsCount();
-                Log.d("SENTENCE SUGGESTIONS","COUNT " + String.valueOf(sugCount));
-                for (int i = 0; i<sugCount;i++){
+                int sentenceCount = info.getSuggestionsCount();
+                Log.d("SENTENCE SUGGESTIONS","COUNT " + String.valueOf(sentenceCount));
+                for (int i = 0; i<sentenceCount;i++){
                     SuggestionsInfo sugInfo = info.getSuggestionsInfoAt(i);
-                    Log.d("SUGGESTIONS","COUNT " + String.valueOf(sugInfo.getSuggestionsCount()));
-                    for(int j = 0; j < sugInfo.getSuggestionsCount(); j++){
+                    int sugCount = sugInfo.getSuggestionsCount();
+                    Log.d("SUGGESTIONS","COUNT " + String.valueOf(sugCount));
+                    for(int j = 0; j < sugCount; j++){
                         String sug = sugInfo.getSuggestionAt(j);
                         Log.d("SUGGESTIONS: ", sug);
                     }
@@ -394,5 +478,70 @@ public class MainActivity extends AppCompatActivity implements SpellCheckerSessi
 
     private boolean isSentenceSpellCheckSupported() {
         return Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN;
+    }
+
+    public int costOfSubstitutionSimple(char a, char b) {
+        return a == b ? 0 : 1;
+    }
+
+    public double costOfSubstitutionComplex(char a, char b) {
+        if(a == b) {
+            return 0;
+        }
+        else {
+            double min_val = 0.5;
+            double max_val = 2;
+            double keyDistance = keyDistances[a - 'a'][b - 'a'];
+            double normalis = (max_val - min_val) / gaussianDist(0);
+            //Log.d("normalizer", String.valueOf(normalis));
+            double weight = min_val + (max_val - min_val) * (1 - gaussianDist(keyDistance) * normalis);
+            //Log.d("Distance of substitution", String.valueOf(keyDistance));
+            return weight;
+        }
+    }
+
+    public double calculateStringDistance(String x, String y) {
+        int xLen = x.length();
+        int yLen = y.length();
+        double[][] dp = new double[xLen + 1][yLen + 1];
+
+        for (int i = 0; i <= xLen; i++) {
+            for (int j = 0; j <= yLen; j++) {
+                if (i == 0) {
+                    dp[i][j] = j;
+                }
+                else if (j == 0) {
+                    dp[i][j] = i;
+                }
+                else {
+                    dp[i][j] = Math.min(Math.min(dp[i - 1][j - 1]
+                                    + this.costOfSubstitutionComplex(x.charAt(i - 1), y.charAt(j - 1)),
+                            dp[i - 1][j] + 1),
+                            dp[i][j - 1] + 1);
+                    }
+                /*if(dp[i][j] > 5){
+                    return 9999;
+                }*/
+            }
+        }
+
+        return dp[xLen][yLen];
+    }
+
+    public void calculateKeyDistances(ArrayList<CustomKey> keys){
+        Log.d("ALLKEYDISTANCES", "Method called");
+        int keyNumber = keys.size();
+        for(int i = 0; i < keyNumber; i++)
+        {
+            CustomKey firstKey = keys.get(i);
+            for (int j = 0; j<keyNumber; j++){
+                CustomKey secondKey = keys.get(j);
+                double dist = firstKey.distanceFrom(secondKey.getX(), secondKey.getY());
+                keyDistances[firstKey.getLabel().charAt(0) - 'a'][secondKey.getLabel().charAt(0) - 'a'] = dist;
+            }
+        }
+
+        Log.d("ALLKEYDISTANCES", Arrays.deepToString(keyDistances));
+
     }
 }
