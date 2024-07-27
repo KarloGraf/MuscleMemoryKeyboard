@@ -22,75 +22,49 @@
         app:layout_constraintTop_toTopOf="parent"
         app:popupTheme="@style/ThemeOverlay.AppCompat.Light" />
 
-    <EditText
-        android:id="@+id/editTextPhrase"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:ems="10"
-        android:inputType="textPersonName"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="5dp"
+            android:layout_marginTop="5dp"
+            android:textSize="@dimen/info_size"
+            android:textColor="@color/light_grey"
+            android:text="@string/phrase_to_input"/>
 
-    <Button
-        android:id="@+id/buttonUpload"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Upload"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/editTextPhrase" />
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/phraseGenerateBtn"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="5dp"
+            android:layout_marginBottom="10dp"
+            android:text="@string/generate_phrase"
+            android:textColor="@color/black"
+            android:textSize="15sp"
+            android:textAllCaps="false"
+            android:textAlignment="viewStart"
+            android:enabled="false"
+            app:backgroundTint="@color/white"
+            app:strokeColor="@color/light_grey"
+            app:strokeWidth="2dp"/>
 
-    <Button
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:id="@+id/buttonStart"
-        android:text="START"
-        app:layout_constraintTop_toBottomOf="@id/buttonUpload"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="5dp"
+            android:layout_marginTop="5dp"
+            android:text="@string/type_phrase_here"
+            android:textSize="@dimen/info_size"
+            android:textColor="@color/light_grey"/>
 
-        />
+        <EditText
+            android:id="@+id/transcribeET"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="5dp"
+            android:layout_marginBottom="10dp"
+            android:textSize="15sp"/>
 
-    <TextView
-        android:id="@+id/gaussLabel"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="20dp"
-        android:layout_marginTop="10dp"
-        android:text="Physical distance alg:"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/buttonStart" />
-
-    <TextView
-        android:id="@+id/lichLabel"
-        android:layout_marginStart="20dp"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="20dp"
-        android:text="String distance alg:"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/gaussLabel" />
-
-    <TextView
-        android:id="@+id/gaussText"
-        android:layout_width="wrap_content"
-        android:layout_marginTop="10dp"
-        android:layout_marginStart="10dp"
-        android:layout_height="wrap_content"
-        android:text=""
-        app:layout_constraintStart_toEndOf="@+id/gaussLabel"
-        app:layout_constraintTop_toBottomOf="@+id/buttonStart" />
-
-    <TextView
-        android:id="@+id/lichText"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="20dp"
-        android:layout_marginStart="10dp"
-        android:text=""
-        app:layout_constraintStart_toEndOf="@+id/gaussLabel"
-        app:layout_constraintTop_toBottomOf="@+id/gaussText" />
+        <include layout="@layout/session_info"/>
 
     </LinearLayout>
 </androidx.constraintlayout.widget.ConstraintLayout>

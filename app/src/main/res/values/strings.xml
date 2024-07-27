@@ -14,7 +14,7 @@
 
     <string name="hello_first_fragment">Hello first fragment</string>
     <string name="hello_second_fragment">Hello second fragment. Arg: %1$s</string>
-
+    <string name="keyboard_layout">Keyboard layout</string>
     <string name="username">Username</string>
     <string name="session_name">Session name</string>
     <string name="keyboard">Keyboard</string>
@@ -26,16 +26,37 @@
     <string name="orientation">Orientation</string>
     <string name="portrait">Portrait</string>
     <string name="landscape">Landscape</string>
-    <string name="default_phrases_num">40</string>
+    <string name="default_phrases_num">30</string>
     <string name="username_default">username</string>
     <string name="session1">session1</string>
     <string name="default_keyboard">completely_blank</string>
     <string name="OK">OK</string>
     <string name="cancel">Cancel</string>
+    <string name="session">Session Name</string>
+    <string name="phrase_to_input">Phrase to input</string>
+    <string name="generate_phrase">New session not yet started</string>
+    <string name="current_phrase_info">Current phrase info: </string>
+    <string name="type_phrase_here">Type phrase here</string>
+
+    <string name="init_title">Initialize new session</string>
+    <string name="init_message">Are you sure you want to initialize a new session? Current session data will be lost.</string>
+
+    <string name="session_info">Session info</string>
+    <string name="time">Time: </string>
+    <string name="phrase_count">Phrase count: </string>
+    <string name="user">User: </string>
+    <string name="tested_keyboard">Tested keyboard: </string>
+    <string name="handling">Handling: </string>
+    <string name="native_keyboard">Keyboard: </string>
 
     <string-array name="keyboard_types">
         <item>Completely blank</item>
         <item>Blank keys</item>
+    </string-array>
+
+    <string-array name="keyboard_layouts">
+        <item>QWERTZ</item>
+        <item>QWERTY</item>
     </string-array>
 
 </resources>

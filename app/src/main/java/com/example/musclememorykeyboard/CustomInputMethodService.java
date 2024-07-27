@@ -1,15 +1,14 @@
 package com.example.musclememorykeyboard;
 
+import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.inputmethodservice.InputMethodService;
 import android.inputmethodservice.Keyboard;
 import android.inputmethodservice.KeyboardView;
-import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.inputmethod.EditorInfo;
-import android.view.inputmethod.InputConnection;
 
 import java.util.ArrayList;
 
@@ -26,16 +25,19 @@ public class CustomInputMethodService extends InputMethodService implements Keyb
 
     private KeyboardView keyboardView;
     boolean invis = true;
-    Keyboard keyboard;
+    CustomKeyboard keyboard;
 
+    @SuppressLint({"ClickableViewAccessibility", "InflateParams"})
     @Override
     public View onCreateInputView(){
         keyboardView = (KeyboardView) getLayoutInflater().inflate(R.layout.keyboard_view, null);
-        keyboard = new Keyboard(this, R.xml.keys_layout);
+        keyboard = new CustomKeyboard(this, R.xml.keys_layout);
+        keyboard.changeKeyHeight();
         keyboardView.setKeyboard(keyboard);
         keyboardView.setPreviewEnabled(false);
         keyboardView.setOnKeyboardActionListener(this);
         keyboardView.setOnTouchListener(this);
+        keyboardView.invalidateAllKeys();
         return keyboardView;
     }
 
@@ -66,8 +68,6 @@ public class CustomInputMethodService extends InputMethodService implements Keyb
 
     @Override
     public void onKey(int code, int[] ints) {
-        InputConnection inputConnection = getCurrentInputConnection();
-
         if(getCurrentInputConnection() != null){
             switch (code){
                 case -4:
@@ -95,17 +95,16 @@ public class CustomInputMethodService extends InputMethodService implements Keyb
 
     @Override
     public void swipeLeft() {
-
     }
 
     @Override
     public void swipeRight() {
         Log.d("SWIPE", "RIGHT SWIPE DETECTED!");
         if(invis) {
-            keyboard = new Keyboard(this, R.xml.blank_keys_layout);
+            keyboard = new CustomKeyboard(this, R.xml.blank_keys_layout);
         }
         else{
-            keyboard = new Keyboard(this, R.xml.keys_layout);
+            keyboard = new CustomKeyboard(this, R.xml.keys_layout);
         }
         invis = !invis;
         keyboardView.setKeyboard(keyboard);
@@ -131,23 +130,31 @@ public class CustomInputMethodService extends InputMethodService implements Keyb
         Log.d("TOUCH_BROADCAST", "SENT!");
     }
 
+    @SuppressLint("ClickableViewAccessibility")
     @Override
     public boolean onTouch(View view, MotionEvent motionEvent) {
-        int count = motionEvent.getPointerCount();
-        double x = motionEvent.getX();
-        double y = motionEvent.getY();
+        double x;
+        double y;
+        int pointerIndex = motionEvent.getActionIndex();
         switch (motionEvent.getActionMasked()){
             case MotionEvent.ACTION_DOWN:
+                x = motionEvent.getX(motionEvent.getPointerId(pointerIndex));
+                y = motionEvent.getY(motionEvent.getPointerId(pointerIndex));
                 Log.d("TouchEvent", "ACTION_DOWN");
-                break;
-            case MotionEvent.ACTION_UP:
-                Log.d("TouchEvent", "ACTION_UP");
                 Log.d("TOUCH", "pressX: " + x + "\n" +
                         "pressY: " + y);
                 broadcastTouch(x, y, KEY_OTHER);
                 break;
+            case MotionEvent.ACTION_UP:
+                Log.d("TouchEvent", "ACTION_UP");
+                break;
             case MotionEvent.ACTION_POINTER_UP:
                 Log.d("TouchEvent", "ACTION_POINTER_UP");
+                break;
+            case MotionEvent.ACTION_POINTER_DOWN:
+                Log.d("TouchEvent", "ACTION_POINTER_DOWN");
+                x = motionEvent.getX(motionEvent.getPointerId(pointerIndex));
+                y = motionEvent.getY(motionEvent.getPointerId(pointerIndex));
                 Log.d("TOUCH", "pressX: " + x + "\n" +
                         "pressY: " + y);
                 broadcastTouch(x, y, KEY_OTHER);

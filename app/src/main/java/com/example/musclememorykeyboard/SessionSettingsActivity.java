@@ -25,7 +25,7 @@ public class SessionSettingsActivity extends AppCompatActivity {
     private RadioGroup typingGroup, orientationGroup;
     private RadioButton oneHand, twoThumb, cradle, portrait, landscape;
 
-    private Spinner keyboard;
+    private Spinner keyboard, keyboard_layout;
     private TypingMode interaction;
     private Orientation orientation;
 
@@ -44,6 +44,7 @@ public class SessionSettingsActivity extends AppCompatActivity {
         username = findViewById(R.id.txtUsername);
         sessionName = findViewById(R.id.txtSessionName);
         keyboard = findViewById(R.id.spinner_Keyboard);
+        keyboard_layout = findViewById(R.id.spinner_KeyboardLayout);
         phraseNumber = findViewById(R.id.txtNumberOfPhrases);
 
         typingGroup = findViewById(R.id.radioGroupInteraction);
@@ -147,15 +148,19 @@ public class SessionSettingsActivity extends AppCompatActivity {
         String finalSessionNameString = sessionNameString;
         int finalNumberOfPhrases = numberOfPhrases;
 
+        KeyboardLayout newLayout = KeyboardLayout.valueOf(keyboard_layout.getSelectedItem().toString());
+
         builder.setMessage("Do you want to save your changes?").setPositiveButton("Yes", new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialogInterface, int i) {
                 Session.setUser(finalUsernameString);
                 Session.setSessionID(finalSessionNameString);
                 Session.setKeyboard(keyboard.getSelectedItemPosition());
+                Session.setKeyboardName(keyboard.getSelectedItem().toString());
                 Session.setPhraseCount(finalNumberOfPhrases);
                 Session.setOrientation(orientation);
                 Session.setTypingMode(interaction);
+                Session.setKeyboardLayout(newLayout);
 
                 Session.setSet(true);
                 finish();

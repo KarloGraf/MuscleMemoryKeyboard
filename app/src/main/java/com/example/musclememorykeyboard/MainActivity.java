@@ -1,91 +1,85 @@
 package com.example.musclememorykeyboard;
 
-import androidx.activity.result.ActivityResultLauncher;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.BroadcastReceiver;
-import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.content.ServiceConnection;
 import android.content.res.Resources;
-import android.inputmethodservice.InputMethodService;
-import android.inputmethodservice.Keyboard;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.Debug;
-import android.os.IBinder;
+import android.os.SystemClock;
 import android.util.DisplayMetrics;
 import android.util.Log;
-import android.util.TypedValue;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.view.inputmethod.InputMethodInfo;
 import android.view.inputmethod.InputMethodManager;
-import android.view.inputmethod.InputMethodSubtype;
-import android.view.inputmethod.TextSnapshot;
-import android.view.textservice.SentenceSuggestionsInfo;
-import android.view.textservice.SpellCheckerSession;
-import android.view.textservice.SuggestionsInfo;
-import android.view.textservice.TextInfo;
 import android.view.textservice.TextServicesManager;
-import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.google.android.material.button.MaterialButton;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
-
-import org.w3c.dom.Text;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.lang.reflect.Array;
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
+import java.util.Random;
 import java.util.TreeMap;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.atomic.AtomicBoolean;
 
-public class MainActivity extends AppCompatActivity implements SpellCheckerSession.SpellCheckerSessionListener {
+public class MainActivity extends AppCompatActivity {
 
     private BroadcastReceiver touchReceiver;
     private static final int ALPHABET_SIZE = 26;
     private FirebaseStorage storage;
+    private ArrayList<String> phrases;
     private StorageReference storageReference;
+    private MaterialButton phraseBtn;
     EditText textInput;
-    TextView stringDistText;
-    TextView gaussDistText;
+    private int phraseIndex;
+    private TextView timeTV, userTV, phraseCountTV, testKeyboardTV, handlingTV, phraseResultTV, sessionTV;
     StringBuilder typedSentence = new StringBuilder();
     StringBuilder typedWord = new StringBuilder();
-    boolean started = false;
     static double keyWidth = 0d;
     static float keyHeight = 0f;
     double dpi = 0;
-    String[] wordList = new String[30000];
-    Double[] valueList = new Double[30000];
+    String[] wordList = new String[29994];
+    Double[] valueList = new Double[29994];
     ArrayList<CustomKey> keyList;
-    ArrayList<String> touchPoints = new ArrayList<>();
     double[][] keyDistances = new double[ALPHABET_SIZE][ALPHABET_SIZE];
     ArrayList<double[]> distanceMapList = new ArrayList<>();
-
+    private String distanceSentence="", stringDistanceSentence="";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        phraseBtn = findViewById(R.id.phraseGenerateBtn);
+        userTV = findViewById(R.id.userTV);
+        testKeyboardTV = findViewById(R.id.keyboardTV);
+        handlingTV = findViewById(R.id.handlingTV);
+        timeTV = findViewById(R.id.timeTV);
+        sessionTV = findViewById(R.id.sessionNameTV);
+        phraseCountTV = findViewById(R.id.countTV);
+        phraseResultTV = findViewById(R.id.phraseResultsTV);
+        textInput = findViewById(R.id.transcribeET);
+        textInput.setEnabled(false);
 
         Toolbar myToolbar = findViewById(R.id.myToolbar);
         setSupportActionBar(myToolbar);
@@ -93,67 +87,34 @@ public class MainActivity extends AppCompatActivity implements SpellCheckerSessi
 
         TextServicesManager textServicesManager = (TextServicesManager) getSystemService(TEXT_SERVICES_MANAGER_SERVICE);
 
-        //Log.d("SPELLCHECKER SERVICE", String.valueOf(textServicesManager.isSpellCheckerEnabled()));
-        SpellCheckerSession spellCheckerSession = textServicesManager.newSpellCheckerSession(null,Locale.ENGLISH,this ,false);
-
 
         DisplayMetrics displayMetrics = new DisplayMetrics();
         getWindowManager().getDefaultDisplay().getMetrics(displayMetrics);
         double width = displayMetrics.widthPixels;
         dpi = displayMetrics.densityDpi;
-        //Toast.makeText(this, "The dpi is: "+dpi, Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, "The dpi is: "+dpi, Toast.LENGTH_SHORT).show();
         keyWidth = width /10;
-        String miss = "misspeled";
 
         //float dip = 55f;
         Resources r = getResources();
         keyHeight = r.getDimensionPixelSize(R.dimen.key_height);
+        double spaceHeight = keyHeight * 1.3;
         double height = 4*keyHeight;
 
-        Button upload = findViewById(R.id.buttonUpload);
-        Button start = findViewById(R.id.buttonStart);
-
-        gaussDistText = findViewById(R.id.gaussText);
-        stringDistText = findViewById(R.id.lichText);
-
-        start.setOnClickListener(view -> {
-            if(!started){
-                start.setText("STOP");
-            }
-            else{
-                start.setText("START");
-            }
-            started = !started;
-
-            //Resetting everything
-            touchPoints.clear();
-            distanceMapList.clear();
-            typedSentence.setLength(0);
-            typedWord.setLength(0);
-            try {
-                Log.d("SPELLCHECK SUPPORTED:" ,String.valueOf(isSentenceSpellCheckSupported()));
-                TextInfo[] txt = new TextInfo[1];
-                txt[0] = new TextInfo("Dogs do not liek to siwm");
-                //spellCheckerSession.getSentenceSuggestions(txt, 3);
-            }
-            catch (Exception ex){
-                ex.printStackTrace();
-            }
-
-        });
         Context main = this;
 
         loadWordList();
         loadFrequencyList();
+        phrases = loadPhraseList();
 
-        textInput = findViewById(R.id.editTextPhrase);
         textInput.setOnFocusChangeListener(new View.OnFocusChangeListener() {
             @Override
             public void onFocusChange(View view, boolean b) {
-                if(b){
+                if(b && Session.isStarted()){
+                    //Set phrases here
                     distanceMapList.clear();
-                    touchPoints.clear();
                     Log.d("EDIT TEXT", "SELECTED");
+                    Session.setStartTime(SystemClock.elapsedRealtime());
                 }
             }
         });
@@ -165,7 +126,7 @@ public class MainActivity extends AppCompatActivity implements SpellCheckerSessi
             public void onReceive(Context context, Intent intent) {
                 if (intent.getAction() != null) {
                     if (intent.getAction().equals(CustomInputMethodService.KEYBOARD_TOUCH)) {
-                        if (started) {
+                        if (Session.isStarted()) {
                             String type = intent.getStringExtra("KeyType");
                             double x = intent.getDoubleExtra("x", 0);
                             double y = intent.getDoubleExtra("y", 0);
@@ -174,21 +135,31 @@ public class MainActivity extends AppCompatActivity implements SpellCheckerSessi
                                 case CustomInputMethodService.KEY_OTHER:
                                     if (y >= height - keyHeight) {
                                         Log.d("TOUCH_BROADCAST", "BOTTOM ROW PRESSED");
+                                        if(x> 2*keyWidth && x < width-2*keyWidth){
+                                            Log.d("SPACEPRESSED", "SPACE PRESSED");
+                                            if(distanceMapList.size() > 0){
+                                                closestWord(false);
+                                            }
+                                            else{
+                                                distanceSentence += " ";
+                                                stringDistanceSentence += " ";
+                                            }
+                                            textInput.append(" ");
+
+                                            Log.d("TOUCH_BROADCAST", "SPACE CUSTOM PRESSED");
+                                        }
                                     } else if (y >= height - 2 * keyHeight && x <= 1.5 * keyWidth) {
                                         Log.d("TOUCH_BROADCAST", "CAPS PRESSED");
                                     } else if (y >= height - 2 * keyHeight && x >= width - 1.5 * keyWidth) {
                                         Log.d("TOUCH_BROADCAST", "DELETE PRESSED");
                                     } else {
-                                        touchPoints.add(String.valueOf(x) + " , " + String.valueOf(y));
                                         if (keyList != null)
                                             closestKey(keyList, x, y);
                                     }
                                     break;
                                 case CustomInputMethodService.KEY_DELETE:
-                                    if (!touchPoints.isEmpty()) {
-                                        touchPoints.remove(touchPoints.size() - 1);
-                                    }
-                                    if (!distanceMapList.isEmpty()) {
+                                    //TODO think about what to do with delete
+                                    /*if (!distanceMapList.isEmpty()) {
                                         distanceMapList.remove(distanceMapList.size() - 1);
                                     }
                                     if (typedSentence.length() > 0) {
@@ -196,27 +167,21 @@ public class MainActivity extends AppCompatActivity implements SpellCheckerSessi
                                     }
                                     if (typedWord.length() > 0) {
                                         typedWord.deleteCharAt(typedWord.length() - 1);
-                                    }
+                                    }*/
                                     break;
                                 case CustomInputMethodService.KEY_DONE:
-                                    if (touchPoints.size() > 0) {
-                                        TextInfo[] txt = new TextInfo[1];
-                                        txt[0] = new TextInfo(typedSentence.toString());
-                                        spellCheckerSession.getSentenceSuggestions(txt, 3);
-                                        closestWord();
-                                    } else {
+                                    Session.setCurrentTime(SystemClock.elapsedRealtime());
+                                    if(distanceMapList.size() > 0){
+                                        closestWord(true);
+                                    }
+                                        nextPhrase();
+                                        textInput.clearFocus();
                                         typedSentence.setLength(0);
                                         typedWord.setLength(0);
-                                        touchPoints.clear();
                                         distanceMapList.clear();
-                                    }
                                     //CALL word detection
                                     break;
                                 case CustomInputMethodService.KEY_SPACE:
-                                    if(touchPoints.size() > 0){
-                                        closestWord();
-                                        touchPoints.add("SPACE");
-                                    }
                                     break;
                                 default:
                                     //DEFAULT CODE
@@ -226,7 +191,27 @@ public class MainActivity extends AppCompatActivity implements SpellCheckerSessi
                     }else if (intent.getAction().equals(CustomInputMethodService.KEYBOARD_OPENED)) {
 
                             keyList = intent.getParcelableArrayListExtra("CustomKeyList");
-                            calculateKeyDistances(keyList);
+                            if(Session.getKeyboardLayout().equals(KeyboardLayout.QWERTZ)){
+                                calculateKeyDistances(keyList);
+                            }
+                            else{
+                                CustomKey zKey = null, yKey = null;
+                                for (CustomKey key:
+                                     keyList) {
+                                    if(key.getLabel().toLowerCase().equals("y")){
+                                        yKey = key;
+                                    }
+                                    else if(key.getLabel().toLowerCase().equals("z")){
+                                        zKey = key;
+                                    }
+                                }
+                                double tmpx = yKey.getX();
+                                double tmpy = yKey.getY();
+                                yKey.setY(zKey.getY());
+                                yKey.setX(zKey.getX());
+                                zKey.setY(tmpy);
+                                zKey.setX(tmpx);
+                            }
                             Log.d("KEYBOARD_OPEN_BROADCAST", keyList.toString());
                             Log.d("KEYBOARD_OPEN_BROADCAST", "RECEIVED!");
                         }
@@ -234,14 +219,6 @@ public class MainActivity extends AppCompatActivity implements SpellCheckerSessi
                 }
 
         };
-
-
-        upload.setOnClickListener(view -> {
-            Logger.writeLog(getApplicationContext(), touchPoints);
-            Logger.uploadLog(getApplicationContext(), storageReference, this);
-            touchPoints.clear();
-
-        });
 
     }
 
@@ -251,31 +228,152 @@ public class MainActivity extends AppCompatActivity implements SpellCheckerSessi
         return true;
     }
 
+    public void nextPhrase() {
+        Session.setCurrentPhraseCount(Session.getCurrentPhraseCount()+1);
+        Session.setTargetPhrase(phraseBtn.getText().toString());
+        Session.setRawPhrase(textInput.getText().toString());
+        Session.setDistancePhrase(distanceSentence);
+        Session.setStringDistancePhrase(stringDistanceSentence);
+
+        Session.calculateErrors(phraseBtn.getText().toString(), textInput.getText().toString(), "none");
+        Session.calculateErrors(phraseBtn.getText().toString(), distanceSentence, "distance");
+        Session.calculateErrors(phraseBtn.getText().toString(), stringDistanceSentence, "stringDistance");
+        Logger.writeToCSV(this);
+        phraseCountTV.setText(R.string.phrase_count);
+        phraseCountTV.append(" " + Session.getCurrentPhraseCount() + "/" + Session.getPhraseCount());
+
+        timeTV.setText(R.string.time);
+        timeTV.append(" " + Session.getTime());
+
+
+        //TODO: give this to session class to handle
+
+        String currentInfo = "Time: " + Session.getTime() + "\n"
+                + "Phrase given: " + phraseBtn.getText() + "\n"
+                + "Raw transcribed: " + textInput.getText() + "\n"
+                + statsToString(Session.getCurrentPlainStats(Session.getCurrentPhraseCount()-1)).toString() + "\n"
+                + "Distance transcribed: " + distanceSentence + "\n"
+                + statsToString(Session.getCurrentDistanceStats(Session.getCurrentPhraseCount()-1)).toString() +"\n"
+                + "String distance transcribed: " + stringDistanceSentence + "\n"
+                + statsToString(Session.getCurrentStringDistanceStats(Session.getCurrentPhraseCount()-1)).toString();
+
+        phraseResultTV.setText(currentInfo);
+
+        Log.d("INPUTEDPHRASE", "Plain: |" + textInput.getText().toString() +"|");
+        Log.d("INPUTEDPHRASE", "Distance: |" + distanceSentence+"|");
+        Log.d("INPUTEDPHRASE", "String distance: " + stringDistanceSentence+"|");
+
+        textInput.setText("");
+        distanceSentence = "";
+        stringDistanceSentence = "";
+
+        Random random = new Random();
+        phraseIndex = random.nextInt(phrases.size());
+        phraseBtn.setText(phrases.get(phraseIndex));
+        phrases.remove(phrases.get(phraseIndex));
+
+        //Hide keyboard
+        InputMethodManager imm = (InputMethodManager) getSystemService(Activity.INPUT_METHOD_SERVICE);
+        View view = MainActivity.this.getCurrentFocus();
+        imm.hideSoftInputFromWindow(view.getWindowToken(), 0);
+
+        //Check if done
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            if (!Session.isStarted()) {
+                //KeyboardLogger.readTest(getApplicationContext(), session);
+                textInput.setEnabled(false);
+                phraseBtn.setText("New session not yet started");
+                Toast.makeText(this, "You have successfully finished with this session!", Toast.LENGTH_LONG).show();
+            }
+        }
+    }
+
+    public String statsToString(HashMap<String, Double> stats){
+        DecimalFormat df = new DecimalFormat("0.00");
+
+        StringBuilder rawBuilder = new StringBuilder();
+        for (Map.Entry<String,Double> entry: stats.entrySet()
+        ) {rawBuilder.append(entry.getKey()).append(" = ").append(df.format(entry.getValue())).append(", ");
+        }
+        if (rawBuilder.length() > 2){
+            rawBuilder.delete(rawBuilder.length()-2, rawBuilder.length());
+        }
+        return rawBuilder.toString();
+    }
+
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         String TAG = "TOOLBAR MENU";
+        InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
         switch (item.getItemId()) {
             case R.id.logSettings:
                 Log.d(TAG, "onOptionsItemSelected: LOG SETTINGS");
+                if(!Session.isStarted()){
+                    Logger.uploadLog(getApplicationContext(), storageReference, this);
+                }
+                else{
+                    AlertDialog.Builder builder = new AlertDialog.Builder(this);
+                    builder.setTitle("Session in progress")
+                            .setMessage("Cannot upload log while session is in progress")
+                            .setPositiveButton("OK", null);
+                    builder.show();
+                    }
                 return true;
 
             case R.id.sessionSettings:
-                Intent myIntent = new Intent(MainActivity.this, SessionSettingsActivity.class);
-                MainActivity.this.startActivity(myIntent);
-                Log.d(TAG, "onOptionsItemSelected: SESSION SETTINGS");
+                if(!Session.isStarted()) {
+                    Intent myIntent = new Intent(MainActivity.this, SessionSettingsActivity.class);
+                    MainActivity.this.startActivity(myIntent);
+                    Log.d(TAG, "onOptionsItemSelected: SESSION SETTINGS");
+                }
+                else{
+                    AlertDialog.Builder builder = new AlertDialog.Builder(this);
+                    builder.setTitle("Session in progress")
+                            .setMessage("Cannot open session settings while session is in progress")
+                            .setPositiveButton("OK", null);
+                    builder.show();
+                }
                 return true;
 
             case R.id.initTestSession:
                 Log.d(TAG, "onOptionsItemSelected: SESSION INIT");
+                initSessionConfirm();
                 return true;
 
             case R.id.bringUp:
-                InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
                 imm.toggleSoftInput(InputMethodManager.SHOW_FORCED, 0);
 
             default:
                 return super.onOptionsItemSelected(item);
         }
+    }
+
+    public void startNewSession(){
+        phrases = loadPhraseList();
+        Session.setStarted(true);
+        textInput.clearFocus();
+        //Resetting everything
+        textInput.setText("");
+
+        userTV.setText("User: "+Session.getUser());
+        sessionTV.setText("Session Name: "+Session.getSessionID());
+        phraseCountTV.setText("Phrase count: " + "0/" + Session.getPhraseCount());
+        handlingTV.setText("Handling: " + Session.getTypingMode().toString());
+        testKeyboardTV.setText("Tested keyboard: " + Session.getKeyboardName());
+
+        Random random = new Random();
+        phraseIndex = random.nextInt(phrases.size());
+        phraseBtn.setText(phrases.get(phraseIndex));
+        phrases.remove(phrases.get(phraseIndex));
+
+        Session.setCurrentPhraseCount(0);
+        distanceMapList.clear();
+        typedSentence.setLength(0);
+        typedWord.setLength(0);
+        textInput.setEnabled(true);
+        phraseResultTV.setText("");
+
+        Logger.setFirst(true);
     }
 
     public static double getKeyWidth(){
@@ -322,6 +420,7 @@ public class MainActivity extends AppCompatActivity implements SpellCheckerSessi
         distanceMapList.add(tmpList);
         typedSentence.append(letter);
         typedWord.append(letter);
+        textInput.append(letter);
         Log.d("STRING BUILDER SENTENCE APPENDED: ", typedSentence.toString());
         Log.d("STRING BUILDER WORD APPENDED: ", typedSentence.toString());
     }
@@ -344,7 +443,26 @@ public class MainActivity extends AppCompatActivity implements SpellCheckerSessi
             ioe.printStackTrace();
         }
         Log.d("READING WORDLIST", "Success");
+    }
 
+    public ArrayList<String> loadPhraseList(){
+        BufferedReader reader;
+        String filename = "phrases.txt";
+        ArrayList<String> phraseList = new ArrayList<>();
+        try{
+            InputStream file = getAssets().open(filename);
+            reader = new BufferedReader(new InputStreamReader(file));
+            String line = reader.readLine();
+            while(line != null){
+                phraseList.add(line.toLowerCase());
+                line = reader.readLine();
+            }
+        } catch (IOException ioe){
+            Log.d("READING WORDLIST", "Failure");
+            ioe.printStackTrace();
+        }
+        Log.d("READING WORDLIST", "Success");
+    return phraseList;
     }
 
     public void loadFrequencyList(){
@@ -379,10 +497,9 @@ public class MainActivity extends AppCompatActivity implements SpellCheckerSessi
         return result;
     }
 
-    public void closestWord(){
+    public void closestWord(boolean last){
         TreeMap<Double, String> wordsSorted= new TreeMap<>();
         Log.d("WORD LENGTH", String.valueOf(distanceMapList.size()));
-        double maxVal = 23135851162D;
         double maxLog = 10.3642;
         double minLog = 5.901;
         double weight = 0.2;
@@ -427,57 +544,23 @@ public class MainActivity extends AppCompatActivity implements SpellCheckerSessi
             }
             distanceMapList.clear();
             Log.d("CLOSEST WORD", wordsSorted.get(wordsSorted.lastKey()));
-            gaussDistText.setText(wordsSorted.get(wordsSorted.lastKey()));
+            distanceSentence += wordsSorted.get(wordsSorted.lastKey());
+            stringDistanceSentence += closestLenWord;
+            //If the function was called by space press, add a space, otherwise it was called by done and no space is needed
+            if(!last){
+                distanceSentence += " ";
+                stringDistanceSentence += " ";
+            }
+
+
+            //textInput.append(wordsSorted.get(wordsSorted.lastKey()));
+            //textInput.append(closestLenWord);
             Log.d("CLOSEST WORD LEV DIST", closestLenWord + " Distance: " + minLenDist);
-            stringDistText.setText(closestLenWord);
         }
         catch(Exception ex){
             ex.printStackTrace();
         }
         //return "Test";
-    }
-
-    @Override
-    public void onGetSuggestions(SuggestionsInfo[] suggestionsInfos) {
-        Log.d("SUGGESTIONS","CALLED");
-        /*typedSentence.setLength(0);
-        if(suggestionsInfos != null){
-            Log.d("SUGGESTIONS","NOT NULL");
-            for (SuggestionsInfo info : suggestionsInfos){
-                int sugCount = info.getSuggestionsCount();
-                for (int i = 0; i<sugCount;i++){
-                    String sug = info.getSuggestionAt(i);
-                    Log.d("SUGGESTIONS: ", sug);
-                }
-            }
-        }*/
-
-    }
-
-    @Override
-    public void onGetSentenceSuggestions(SentenceSuggestionsInfo[] sentenceSuggestionsInfos) {
-        Log.d("SENTENCE SUGGESTIONS","CALLED");
-        typedSentence.setLength(0);
-        if(sentenceSuggestionsInfos != null){
-            Log.d("SENTENCE SUGGESTIONS","NOT NULL");
-            for (SentenceSuggestionsInfo info : sentenceSuggestionsInfos){
-                int sentenceCount = info.getSuggestionsCount();
-                Log.d("SENTENCE SUGGESTIONS","COUNT " + String.valueOf(sentenceCount));
-                for (int i = 0; i<sentenceCount;i++){
-                    SuggestionsInfo sugInfo = info.getSuggestionsInfoAt(i);
-                    int sugCount = sugInfo.getSuggestionsCount();
-                    Log.d("SUGGESTIONS","COUNT " + String.valueOf(sugCount));
-                    for(int j = 0; j < sugCount; j++){
-                        String sug = sugInfo.getSuggestionAt(j);
-                        Log.d("SUGGESTIONS: ", sug);
-                    }
-                }
-            }
-        }
-    }
-
-    private boolean isSentenceSpellCheckSupported() {
-        return Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN;
     }
 
     public int costOfSubstitutionSimple(char a, char b) {
@@ -493,9 +576,8 @@ public class MainActivity extends AppCompatActivity implements SpellCheckerSessi
             double max_val = 2;
             double keyDistance = keyDistances[a - 'a'][b - 'a'];
             double normalis = (max_val - min_val) / gaussianDist(0);
-            //Log.d("normalizer", String.valueOf(normalis));
+            //Setting the value to a interval between 0.5 and 2
             double weight = min_val + (max_val - min_val) * (1 - gaussianDist(keyDistance) * normalis);
-            //Log.d("Distance of substitution", String.valueOf(keyDistance));
             return weight;
         }
     }
@@ -519,9 +601,6 @@ public class MainActivity extends AppCompatActivity implements SpellCheckerSessi
                             dp[i - 1][j] + 1),
                             dp[i][j - 1] + 1);
                     }
-                /*if(dp[i][j] > 5){
-                    return 9999;
-                }*/
             }
         }
 
@@ -544,4 +623,23 @@ public class MainActivity extends AppCompatActivity implements SpellCheckerSessi
         Log.d("ALLKEYDISTANCES", Arrays.deepToString(keyDistances));
 
     }
+
+    public void initSessionConfirm() {
+        //Alert box to confirm new session since phrase count, and such are reset
+        AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+        builder.setMessage(R.string.init_message)
+                .setTitle(R.string.init_title)
+                .setCancelable(false);
+
+        builder.setPositiveButton(R.string.OK, (dialogInterface, i) -> {
+        startNewSession();
+        });
+
+        builder.setNegativeButton(R.string.cancel, ((dialogInterface, i) -> {
+        }));
+
+        AlertDialog dialog = builder.create();
+        dialog.show();
+    }
+
 }

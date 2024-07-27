@@ -1,9 +1,7 @@
 package com.example.musclememorykeyboard;
 
-import android.content.res.Resources;
 import android.os.Parcel;
 import android.os.Parcelable;
-import android.util.TypedValue;
 
 public class CustomKey implements Parcelable {
     private double x;
@@ -24,6 +22,7 @@ public class CustomKey implements Parcelable {
         y = in.readDouble();
         label = in.readString();
     }
+
 
     @Override
     public String toString() {

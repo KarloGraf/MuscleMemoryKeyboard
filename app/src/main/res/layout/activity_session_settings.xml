@@ -65,13 +65,30 @@
         app:layout_constraintTop_toBottomOf="@+id/labelKeyboard" />
 
     <TextView
+        android:id="@+id/labelKeyboardLayout"
+        android:layout_marginTop="10dp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/keyboard_layout"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/spinner_Keyboard" />
+
+    <Spinner
+        android:id="@+id/spinner_KeyboardLayout"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:entries="@array/keyboard_layouts"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/labelKeyboardLayout" />
+
+    <TextView
         android:id="@+id/labelNumberOfPhrases"
         android:layout_marginTop="10dp"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="@string/number_of_phrases"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/spinner_Keyboard" />
+        app:layout_constraintTop_toBottomOf="@+id/spinner_KeyboardLayout" />
 
     <EditText
         android:id="@+id/txtNumberOfPhrases"
