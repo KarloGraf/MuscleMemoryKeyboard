@@ -10,6 +10,10 @@
         <entry key="..\:/Users/Karlo/AndroidStudioProjects/MuscleMemoryKeyboard/app/src/main/res/drawable/ic_baseline_text_snippet_24.xml" value="0.3675" />
         <entry key="..\:/Users/Karlo/AndroidStudioProjects/MuscleMemoryKeyboard/app/src/main/res/drawable/ic_launcher_background.xml" value="0.281" />
         <entry key="..\:/Users/Karlo/AndroidStudioProjects/MuscleMemoryKeyboard/app/src/main/res/drawable/key_background.xml" value="0.313" />
+        <entry key="..\:/Users/Karlo/AndroidStudioProjects/MuscleMemoryKeyboard/app/src/main/res/drawable/key_outline.xml" value="0.3675" />
+        <entry key="..\:/Users/Karlo/AndroidStudioProjects/MuscleMemoryKeyboard/app/src/main/res/drawable/key_outline_background.xml" value="0.3675" />
+        <entry key="..\:/Users/Karlo/AndroidStudioProjects/MuscleMemoryKeyboard/app/src/main/res/drawable/key_outline_pressed.xml" value="0.1875" />
+        <entry key="..\:/Users/Karlo/AndroidStudioProjects/MuscleMemoryKeyboard/app/src/main/res/drawable/keyboard_outline.xml" value="0.313" />
         <entry key="..\:/Users/Karlo/AndroidStudioProjects/MuscleMemoryKeyboard/app/src/main/res/drawable/rounded_corners.xml" value="0.313" />
         <entry key="..\:/Users/Karlo/AndroidStudioProjects/MuscleMemoryKeyboard/app/src/main/res/drawable/rounded_corners_pressed.xml" value="0.313" />
         <entry key="..\:/Users/Karlo/AndroidStudioProjects/MuscleMemoryKeyboard/app/src/main/res/layout/activity_main.xml" value="0.25" />
@@ -19,6 +23,7 @@
         <entry key="..\:/Users/Karlo/AndroidStudioProjects/MuscleMemoryKeyboard/app/src/main/res/layout/fragment_second.xml" value="0.18802083333333333" />
         <entry key="..\:/Users/Karlo/AndroidStudioProjects/MuscleMemoryKeyboard/app/src/main/res/layout/key_preview.xml" value="0.36666666666666664" />
         <entry key="..\:/Users/Karlo/AndroidStudioProjects/MuscleMemoryKeyboard/app/src/main/res/layout/keyboard_view.xml" value="0.36666666666666664" />
+        <entry key="..\:/Users/Karlo/AndroidStudioProjects/MuscleMemoryKeyboard/app/src/main/res/layout/keyboard_view_test.xml" value="0.18802083333333333" />
         <entry key="..\:/Users/Karlo/AndroidStudioProjects/MuscleMemoryKeyboard/app/src/main/res/layout/session_info.xml" value="0.36666666666666664" />
         <entry key="..\:/Users/Karlo/AndroidStudioProjects/MuscleMemoryKeyboard/app/src/main/res/menu/toolbar.xml" value="0.36666666666666664" />
         <entry key="..\:/Users/Karlo/AndroidStudioProjects/MuscleMemoryKeyboard/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml" value="0.3675" />

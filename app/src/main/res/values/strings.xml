@@ -26,7 +26,7 @@
     <string name="orientation">Orientation</string>
     <string name="portrait">Portrait</string>
     <string name="landscape">Landscape</string>
-    <string name="default_phrases_num">30</string>
+    <string name="default_phrases_num">50</string>
     <string name="username_default">username</string>
     <string name="session1">session1</string>
     <string name="default_keyboard">completely_blank</string>
@@ -50,7 +50,7 @@
     <string name="native_keyboard">Keyboard: </string>
 
     <string-array name="keyboard_types">
-        <item>Completely blank</item>
+        <item>Invisible keys</item>
         <item>Blank keys</item>
     </string-array>
 

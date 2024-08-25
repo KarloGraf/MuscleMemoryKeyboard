@@ -6,11 +6,17 @@ import android.inputmethodservice.InputMethodService;
 import android.inputmethodservice.Keyboard;
 import android.inputmethodservice.KeyboardView;
 import android.util.Log;
+import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.inputmethod.EditorInfo;
+import android.widget.FrameLayout;
+
+import androidx.core.content.ContextCompat;
 
 import java.util.ArrayList;
+import java.util.List;
 
 public class CustomInputMethodService extends InputMethodService implements KeyboardView.OnKeyboardActionListener, View.OnTouchListener{
     public static final String KEYBOARD_TOUCH = "KeyboardTouched";
@@ -20,9 +26,6 @@ public class CustomInputMethodService extends InputMethodService implements Keyb
     public static final String KEY_DONE = "Done";
     public static final String KEY_OTHER = "Other";
 
-
-
-
     private KeyboardView keyboardView;
     boolean invis = true;
     CustomKeyboard keyboard;
@@ -30,14 +33,16 @@ public class CustomInputMethodService extends InputMethodService implements Keyb
     @SuppressLint({"ClickableViewAccessibility", "InflateParams"})
     @Override
     public View onCreateInputView(){
-        keyboardView = (KeyboardView) getLayoutInflater().inflate(R.layout.keyboard_view, null);
+        keyboardView = (CustomKeyboardOverlay) getLayoutInflater().inflate(R.layout.keyboard_view, null);
         keyboard = new CustomKeyboard(this, R.xml.keys_layout);
         keyboard.changeKeyHeight();
         keyboardView.setKeyboard(keyboard);
+        keyboardView.setPadding(dpToPx(72),0,0,0);
         keyboardView.setPreviewEnabled(false);
         keyboardView.setOnKeyboardActionListener(this);
         keyboardView.setOnTouchListener(this);
         keyboardView.invalidateAllKeys();
+
         return keyboardView;
     }
 
@@ -69,6 +74,8 @@ public class CustomInputMethodService extends InputMethodService implements Keyb
     @Override
     public void onKey(int code, int[] ints) {
         if(getCurrentInputConnection() != null){
+            /*Only care about done, delete and space,
+            other keys are invisible or disabled*/
             switch (code){
                 case -4:
                     broadcastTouch(0,0,KEY_DONE);
@@ -80,13 +87,15 @@ public class CustomInputMethodService extends InputMethodService implements Keyb
                     broadcastTouch(0,0,KEY_SPACE);
                     break;
                 default:
-                    //broadcastTouch(0,0,KEY_OTHER);
                     break;
             }
         }
-
     }
 
+    public int dpToPx(int dp) {
+        float density = getResources().getDisplayMetrics().density;
+        return Math.round(dp * density);
+    }
 
     @Override
     public void onText(CharSequence charSequence) {
@@ -95,6 +104,17 @@ public class CustomInputMethodService extends InputMethodService implements Keyb
 
     @Override
     public void swipeLeft() {
+        Log.d("SWIPE", "LEFT SWIPE DETECTED!");
+        if(invis) {
+            keyboard = new CustomKeyboard(this, R.xml.blank_keys_layout);
+            keyboardView.setPadding(0,0,0,0);
+        }
+        else{
+            keyboard = new CustomKeyboard(this, R.xml.keys_layout);
+            keyboardView.setPadding(dpToPx(72),0,0,0);
+        }
+        invis = !invis;
+        keyboardView.setKeyboard(keyboard);
     }
 
     @Override
@@ -102,9 +122,11 @@ public class CustomInputMethodService extends InputMethodService implements Keyb
         Log.d("SWIPE", "RIGHT SWIPE DETECTED!");
         if(invis) {
             keyboard = new CustomKeyboard(this, R.xml.blank_keys_layout);
+            keyboardView.setPadding(0,0,0,0);
         }
         else{
             keyboard = new CustomKeyboard(this, R.xml.keys_layout);
+            keyboardView.setPadding(dpToPx(72),0,0,0);
         }
         invis = !invis;
         keyboardView.setKeyboard(keyboard);
@@ -138,32 +160,18 @@ public class CustomInputMethodService extends InputMethodService implements Keyb
         int pointerIndex = motionEvent.getActionIndex();
         switch (motionEvent.getActionMasked()){
             case MotionEvent.ACTION_DOWN:
-                x = motionEvent.getX(motionEvent.getPointerId(pointerIndex));
-                y = motionEvent.getY(motionEvent.getPointerId(pointerIndex));
-                Log.d("TouchEvent", "ACTION_DOWN");
-                Log.d("TOUCH", "pressX: " + x + "\n" +
-                        "pressY: " + y);
+                x = motionEvent.getX();
+                y = motionEvent.getY();
                 broadcastTouch(x, y, KEY_OTHER);
                 break;
-            case MotionEvent.ACTION_UP:
-                Log.d("TouchEvent", "ACTION_UP");
-                break;
-            case MotionEvent.ACTION_POINTER_UP:
-                Log.d("TouchEvent", "ACTION_POINTER_UP");
-                break;
+            //ACTION_POINTER_DOWN is for when multiple touches happen at the same time
             case MotionEvent.ACTION_POINTER_DOWN:
-                Log.d("TouchEvent", "ACTION_POINTER_DOWN");
                 x = motionEvent.getX(motionEvent.getPointerId(pointerIndex));
                 y = motionEvent.getY(motionEvent.getPointerId(pointerIndex));
-                Log.d("TOUCH", "pressX: " + x + "\n" +
-                        "pressY: " + y);
                 broadcastTouch(x, y, KEY_OTHER);
                 break;
-            case MotionEvent.ACTION_MOVE:
-                Log.d("TouchEvent", "ACTION_MOVE");
-                break;
-
         }
+        //Returning false allows the touch event to propagate further
         return false;
     }
 

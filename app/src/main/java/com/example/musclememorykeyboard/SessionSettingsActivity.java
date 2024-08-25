@@ -1,5 +1,6 @@
 package com.example.musclememorykeyboard;
 
+import android.app.Activity;
 import android.content.DialogInterface;
 import android.os.Bundle;
 
@@ -132,7 +133,7 @@ public class SessionSettingsActivity extends AppCompatActivity {
             numberOfPhrases = Integer.valueOf(phraseNumber.getText().toString());
         }
         catch (Exception ex){
-            numberOfPhrases = 30;
+            numberOfPhrases = 50;
         }
 
         if(usernameString.isEmpty()){
@@ -163,6 +164,7 @@ public class SessionSettingsActivity extends AppCompatActivity {
                 Session.setKeyboardLayout(newLayout);
 
                 Session.setSet(true);
+                setResult(Activity.RESULT_OK);
                 finish();
             }
         }).setNegativeButton("No", new DialogInterface.OnClickListener() {

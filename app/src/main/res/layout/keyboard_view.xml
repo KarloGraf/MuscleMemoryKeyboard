@@ -1,18 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
-<android.inputmethodservice.KeyboardView
+<com.example.musclememorykeyboard.CustomKeyboardOverlay
     xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/keyboard_view"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:keyPreviewLayout="@layout/key_preview"
-    android:keyBackground="@drawable/key_background"
+    android:keyBackground="@drawable/key_outline_background"
     android:keyTextColor="@color/black"
-    android:background="@color/light_grey"
+    android:background="@drawable/keyboard_outline"
     android:layout_marginTop="0px"
     android:layout_marginLeft="0px"
     android:layout_marginRight="0px"
     android:layout_marginBottom="0px"
-    android:padding="0px"
     android:layout_alignParentBottom="true">
 
-</android.inputmethodservice.KeyboardView>
+</com.example.musclememorykeyboard.CustomKeyboardOverlay>

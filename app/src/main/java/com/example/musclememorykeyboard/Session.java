@@ -15,7 +15,7 @@ public class Session {
     public static void setKeyboardName(String keyboardName) {
         Session.keyboardName = keyboardName;
     }
-    private static String user = "username", sessionID = "session1", keyboardName = "Completely blank", targetPhrase = "",
+    private static String user = "username", sessionID = "session1", keyboardName = "Invisible keys", targetPhrase = "",
     rawPhrase = "", distancePhrase = "", stringDistancePhrase = "";
 
     public static String getTargetPhrase() {
@@ -49,8 +49,13 @@ public class Session {
     public static void setStringDistancePhrase(String stringDistancePhrase) {
         Session.stringDistancePhrase = stringDistancePhrase;
     }
+    public static void clearStats(){
+        stringDistanceStats.clear();
+        distanceStats.clear();
+        plainStats.clear();
+    }
 
-    private static int phraseCount = 30, keyboard = 0;
+    private static int phraseCount = 50, keyboard = 0;
     private static long startTime = 0, currentTime = 0;
     private static Orientation orientation = Orientation.PORTRAIT;
     private static TypingMode typingMode = TypingMode.TWO_THUMBS;
@@ -99,39 +104,13 @@ public class Session {
 
         HashMap<String, Double> currentStats = new HashMap<>();
 
-        double C = 0;
-        double INF = 0;
-        double IF = 0;
-
         int m = targetPhrase.length();
         int n = writtenPhrase.length();
 
-        int[][] dp = new int[m+1][n+1];
+        double distance = calculateStringDistance(targetPhrase, writtenPhrase);
 
-        for(int i = 0; i <= m; i++) {
-            for(int j = 0; j <= n; j++) {
-                if (i == 0) {
-                    dp[i][j] = j;
-                } else if (j == 0) {
-                    dp[i][j] = i;
-                } else if (targetPhrase.charAt(i - 1) == writtenPhrase.charAt(j - 1)) {
-                    dp[i][j] = dp[i - 1][j - 1];
-                } else {
-                    dp[i][j] = 1 + Math.min(Math.min(dp[i][j - 1], dp[i - 1][j]), dp[i - 1][j - 1]);
-                }
-            }
-        }
-
-        INF = dp[m][n];
-
-        if(m > n) {
-            C = m - INF;
-        } else {
-            C = n - INF;
-        }
-
-        double NCER = (INF / (C + INF + IF)) * 100;
-        double TER = ((INF + IF) / (C + INF + IF)) * 100;
+        double NCER = distance/targetPhrase.length() * 100;
+        double TER = NCER;
 
 
 
@@ -153,6 +132,34 @@ public class Session {
                 plainStats.add(currentStats);
                 break;
         }
+    }
+
+    public static double calculateStringDistance(String x, String y) {
+        int xLen = x.length();
+        int yLen = y.length();
+        double[][] dp = new double[xLen + 1][yLen + 1];
+
+        for (int i = 0; i <= xLen; i++) {
+            for (int j = 0; j <= yLen; j++) {
+                if (i == 0) {
+                    dp[i][j] = j;
+                }
+                else if (j == 0) {
+                    dp[i][j] = i;
+                }
+                else {
+                    dp[i][j] = Math.min(Math.min(dp[i - 1][j - 1]
+                                    + Session.costOfSubstitutionSimple(x.charAt(i - 1), y.charAt(j - 1)),
+                            dp[i - 1][j] + 1),
+                            dp[i][j - 1] + 1);
+                }
+            }
+        }
+
+        return dp[xLen][yLen];
+    }
+    public static int costOfSubstitutionSimple(char a, char b) {
+        return a == b ? 0 : 1;
     }
 
     public static long getCurrentTime() {

@@ -47,6 +47,7 @@ public class MainActivity extends AppCompatActivity {
 
     private BroadcastReceiver touchReceiver;
     private static final int ALPHABET_SIZE = 26;
+    private final int SESSION_SETTINGS_CODE = 145;
     private FirebaseStorage storage;
     private ArrayList<String> phrases;
     private StorageReference storageReference;
@@ -59,8 +60,8 @@ public class MainActivity extends AppCompatActivity {
     static double keyWidth = 0d;
     static float keyHeight = 0f;
     double dpi = 0;
-    String[] wordList = new String[29994];
-    Double[] valueList = new Double[29994];
+    String[] wordList = new String[29989];
+    Double[] valueList = new Double[29989];
     ArrayList<CustomKey> keyList;
     double[][] keyDistances = new double[ALPHABET_SIZE][ALPHABET_SIZE];
     ArrayList<double[]> distanceMapList = new ArrayList<>();
@@ -69,6 +70,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
         setContentView(R.layout.activity_main);
         phraseBtn = findViewById(R.id.phraseGenerateBtn);
         userTV = findViewById(R.id.userTV);
@@ -92,7 +94,6 @@ public class MainActivity extends AppCompatActivity {
         getWindowManager().getDefaultDisplay().getMetrics(displayMetrics);
         double width = displayMetrics.widthPixels;
         dpi = displayMetrics.densityDpi;
-        Toast.makeText(this, "The dpi is: "+dpi, Toast.LENGTH_SHORT).show();
         keyWidth = width /10;
 
         //float dip = 55f;
@@ -124,99 +125,105 @@ public class MainActivity extends AppCompatActivity {
         touchReceiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
-                if (intent.getAction() != null) {
-                    if (intent.getAction().equals(CustomInputMethodService.KEYBOARD_TOUCH)) {
-                        if (Session.isStarted()) {
-                            String type = intent.getStringExtra("KeyType");
-                            double x = intent.getDoubleExtra("x", 0);
-                            double y = intent.getDoubleExtra("y", 0);
-                            Log.d("TOUCH_BROADCAST", "TOUCH RECEIVED! X: " + x + " Y: " + y + "TYPE: " + type.toString());
-                            switch (type) {
-                                case CustomInputMethodService.KEY_OTHER:
-                                    if (y >= height - keyHeight) {
-                                        Log.d("TOUCH_BROADCAST", "BOTTOM ROW PRESSED");
-                                        if(x> 2*keyWidth && x < width-2*keyWidth){
-                                            Log.d("SPACEPRESSED", "SPACE PRESSED");
-                                            if(distanceMapList.size() > 0){
-                                                closestWord(false);
-                                            }
-                                            else{
-                                                distanceSentence += " ";
-                                                stringDistanceSentence += " ";
-                                            }
-                                            textInput.append(" ");
-
-                                            Log.d("TOUCH_BROADCAST", "SPACE CUSTOM PRESSED");
-                                        }
-                                    } else if (y >= height - 2 * keyHeight && x <= 1.5 * keyWidth) {
-                                        Log.d("TOUCH_BROADCAST", "CAPS PRESSED");
-                                    } else if (y >= height - 2 * keyHeight && x >= width - 1.5 * keyWidth) {
-                                        Log.d("TOUCH_BROADCAST", "DELETE PRESSED");
-                                    } else {
-                                        if (keyList != null)
-                                            closestKey(keyList, x, y);
-                                    }
-                                    break;
-                                case CustomInputMethodService.KEY_DELETE:
-                                    //TODO think about what to do with delete
-                                    /*if (!distanceMapList.isEmpty()) {
-                                        distanceMapList.remove(distanceMapList.size() - 1);
-                                    }
-                                    if (typedSentence.length() > 0) {
-                                        typedSentence.deleteCharAt(typedSentence.length() - 1);
-                                    }
-                                    if (typedWord.length() > 0) {
-                                        typedWord.deleteCharAt(typedWord.length() - 1);
-                                    }*/
-                                    break;
-                                case CustomInputMethodService.KEY_DONE:
-                                    Session.setCurrentTime(SystemClock.elapsedRealtime());
+                if(intent.getAction() == null){
+                    return;
+                }
+                if (intent.getAction().equals(CustomInputMethodService.KEYBOARD_TOUCH)) {
+                    //If session isn't started ignore the touch
+                    if (!Session.isStarted()) {
+                        return;
+                    }
+                    String type = intent.getStringExtra("KeyType");
+                    double x = intent.getDoubleExtra("x", 0);
+                    double y = intent.getDoubleExtra("y", 0);
+                    Log.d("TOUCH_BROADCAST", "TOUCH RECEIVED! X: " + x + " Y: " + y + "TYPE: " + type.toString());
+                    switch (type) {
+                        case CustomInputMethodService.KEY_OTHER:
+                            if (y >= height - keyHeight) {
+                                Log.d("TOUCH_BROADCAST", "BOTTOM ROW PRESSED");
+                                if(x> 2*keyWidth && x < width-2*keyWidth){
+                                    Log.d("SPACEPRESSED", "SPACE PRESSED");
                                     if(distanceMapList.size() > 0){
-                                        closestWord(true);
+                                        closestWord(false);
                                     }
-                                        nextPhrase();
-                                        textInput.clearFocus();
-                                        typedSentence.setLength(0);
-                                        typedWord.setLength(0);
-                                        distanceMapList.clear();
-                                    //CALL word detection
-                                    break;
-                                case CustomInputMethodService.KEY_SPACE:
-                                    break;
-                                default:
-                                    //DEFAULT CODE
-                                    break;
-                            }
-                        }
-                    }else if (intent.getAction().equals(CustomInputMethodService.KEYBOARD_OPENED)) {
+                                    else{
+                                        distanceSentence += " ";
+                                        stringDistanceSentence += " ";
+                                    }
+                                    textInput.append(" ");
 
-                            keyList = intent.getParcelableArrayListExtra("CustomKeyList");
-                            if(Session.getKeyboardLayout().equals(KeyboardLayout.QWERTZ)){
-                                calculateKeyDistances(keyList);
-                            }
-                            else{
-                                CustomKey zKey = null, yKey = null;
-                                for (CustomKey key:
-                                     keyList) {
-                                    if(key.getLabel().toLowerCase().equals("y")){
-                                        yKey = key;
-                                    }
-                                    else if(key.getLabel().toLowerCase().equals("z")){
-                                        zKey = key;
-                                    }
+                                    Log.d("TOUCH_BROADCAST", "SPACE CUSTOM PRESSED");
                                 }
-                                double tmpx = yKey.getX();
-                                double tmpy = yKey.getY();
-                                yKey.setY(zKey.getY());
-                                yKey.setX(zKey.getX());
-                                zKey.setY(tmpy);
-                                zKey.setX(tmpx);
+                            } else if (y >= height - 2 * keyHeight && x <= 1.5 * keyWidth) {
+                                Log.d("TOUCH_BROADCAST", "CAPS PRESSED");
+                            } else if (y >= height - 2 * keyHeight && x >= width - 1.5 * keyWidth) {
+                                Log.d("TOUCH_BROADCAST", "DELETE PRESSED");
+                            } else {
+                                if (keyList != null)
+                                    closestKey(keyList, x, y);
                             }
-                            Log.d("KEYBOARD_OPEN_BROADCAST", keyList.toString());
-                            Log.d("KEYBOARD_OPEN_BROADCAST", "RECEIVED!");
+                            break;
+                        case CustomInputMethodService.KEY_DELETE:
+                            //TODO think about what to do with delete
+                            /*if (!distanceMapList.isEmpty()) {
+                                distanceMapList.remove(distanceMapList.size() - 1);
+                            }
+                            if (typedSentence.length() > 0) {
+                                typedSentence.deleteCharAt(typedSentence.length() - 1);
+                            }
+                            if (typedWord.length() > 0) {
+                                typedWord.deleteCharAt(typedWord.length() - 1);
+                            }*/
+                            break;
+                        case CustomInputMethodService.KEY_DONE:
+                            Session.setCurrentTime(SystemClock.elapsedRealtime());
+                            if(distanceMapList.size() > 0){
+                                closestWord(true);
+                            }
+                                nextPhrase();
+                                textInput.clearFocus();
+                                typedSentence.setLength(0);
+                                typedWord.setLength(0);
+                                distanceMapList.clear();
+                            //CALL word detection
+                            break;
+                        case CustomInputMethodService.KEY_SPACE:
+                            break;
+                        default:
+                            //DEFAULT CODE
+                            break;
+                    }
+                }else if (intent.getAction().equals(CustomInputMethodService.KEYBOARD_OPENED)) {
+
+                        keyList = intent.getParcelableArrayListExtra("CustomKeyList");
+                        if(Session.getKeyboardLayout().equals(KeyboardLayout.QWERTZ)){
+                            calculateKeyDistances(keyList);
+                            costOfSubstitutionComplex('a', 'y');
+                            costOfSubstitutionComplex('m', 'l');
                         }
+                        else{
+                            CustomKey zKey = null, yKey = null;
+                            for (CustomKey key:
+                                 keyList) {
+                                if(key.getLabel().toLowerCase().equals("y")){
+                                    yKey = key;
+                                }
+                                else if(key.getLabel().toLowerCase().equals("z")){
+                                    zKey = key;
+                                }
+                            }
+                            double tmpx = yKey.getX();
+                            double tmpy = yKey.getY();
+                            yKey.setY(zKey.getY());
+                            yKey.setX(zKey.getX());
+                            zKey.setY(tmpy);
+                            zKey.setX(tmpx);
+                        }
+                        Log.d("KEYBOARD_OPEN_BROADCAST", keyList.toString());
+                        Log.d("KEYBOARD_OPEN_BROADCAST", "RECEIVED!");
                     }
                 }
+
 
         };
 
@@ -323,7 +330,7 @@ public class MainActivity extends AppCompatActivity {
             case R.id.sessionSettings:
                 if(!Session.isStarted()) {
                     Intent myIntent = new Intent(MainActivity.this, SessionSettingsActivity.class);
-                    MainActivity.this.startActivity(myIntent);
+                    MainActivity.this.startActivityForResult(myIntent, SESSION_SETTINGS_CODE);
                     Log.d(TAG, "onOptionsItemSelected: SESSION SETTINGS");
                 }
                 else{
@@ -348,12 +355,28 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if(requestCode == SESSION_SETTINGS_CODE){
+            if(resultCode == RESULT_OK){
+                userTV.setText("User: "+Session.getUser());
+                sessionTV.setText("Session Name: "+Session.getSessionID());
+                phraseCountTV.setText("Phrase count: " + "0/" + Session.getPhraseCount());
+                handlingTV.setText("Handling: " + Session.getTypingMode().toString());
+                testKeyboardTV.setText("Tested keyboard: " + Session.getKeyboardName());
+            }
+        }
+        super.onActivityResult(requestCode, resultCode, data);
+    }
+
     public void startNewSession(){
         phrases = loadPhraseList();
         Session.setStarted(true);
         textInput.clearFocus();
         //Resetting everything
         textInput.setText("");
+        distanceSentence = "";
+        stringDistanceSentence ="";
 
         userTV.setText("User: "+Session.getUser());
         sessionTV.setText("Session Name: "+Session.getSessionID());
@@ -372,6 +395,8 @@ public class MainActivity extends AppCompatActivity {
         typedWord.setLength(0);
         textInput.setEnabled(true);
         phraseResultTV.setText("");
+
+        Session.clearStats();
 
         Logger.setFirst(true);
     }
@@ -401,17 +426,17 @@ public class MainActivity extends AppCompatActivity {
     public void closestKey(List<CustomKey> keys, double x, double y){
         double[] tmpList = new double[ALPHABET_SIZE];
         String letter = "";
+        double var = 8;
         double highest = 0;
         double sum = 0;
         for (CustomKey key:
              keys) {
-            double val = gaussianDist(key.distanceFrom(x,y));
+            double val = gaussianDist(key.distanceFrom(x,y), var);
             sum += val;
             if(val > highest){
                 highest = val;
                 letter = key.getLabel();
             }
-            Log.d("HIGHEST GAUSS VALUE", String.valueOf(val) + " " + key.getLabel());
             tmpList[key.getLabel().charAt(0) - 'a'] = val;
         }
         for(int i = 0; i < ALPHABET_SIZE; i++){
@@ -421,8 +446,6 @@ public class MainActivity extends AppCompatActivity {
         typedSentence.append(letter);
         typedWord.append(letter);
         textInput.append(letter);
-        Log.d("STRING BUILDER SENTENCE APPENDED: ", typedSentence.toString());
-        Log.d("STRING BUILDER WORD APPENDED: ", typedSentence.toString());
     }
 
     public void loadWordList(){
@@ -487,11 +510,10 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
-    public double gaussianDist(double dist){
+    public double gaussianDist(double dist, double var){
         double mean = 0;
-        double var_in_mm = 7;
-        double variance = var_in_mm * 0.03937 * dpi;
-        //Log.d("Variance", String.valueOf(variance));
+        //Millimeters to pixels conversion
+        double variance = var * 0.03937 * dpi;
         double result;
         result = (1/(variance*Math.sqrt(2*Math.PI)))*Math.pow(Math.E,-Math.pow((dist-mean),2)/(2*Math.pow(variance,2)));
         return result;
@@ -532,11 +554,12 @@ public class MainActivity extends AppCompatActivity {
                         }
                     }*/
                 }
-                if (tmpWord != null && tmpWord.length() == wordLength) {
-                    //Log.d("WORDS", tmpWord);
+                if (tmpWord.length() == wordLength) {
                     for (int i = 0; i < distanceMapList.size(); i++) {
+                        //Distance is stored in a list of arrays
                         totalDist += distanceMapList.get(i)[(tmpWord.charAt(i))-'a'];
                     }
+                    //Modifying the value based on the frequency of the word
                     totalDist *= 1 + ((Math.log(valueList[counter]) - minLog)/(maxLog - minLog) * weight);
                     wordsSorted.put(totalDist, tmpWord);
                 }
@@ -575,9 +598,8 @@ public class MainActivity extends AppCompatActivity {
             double min_val = 0.5;
             double max_val = 2;
             double keyDistance = keyDistances[a - 'a'][b - 'a'];
-            double normalis = (max_val - min_val) / gaussianDist(0);
-            //Setting the value to a interval between 0.5 and 2
-            double weight = min_val + (max_val - min_val) * (1 - gaussianDist(keyDistance) * normalis);
+            //Setting the value to a interval between 0 and 2
+            double weight = min_val + (max_val - min_val) * (1 - keyDistance);
             return weight;
         }
     }
@@ -610,12 +632,16 @@ public class MainActivity extends AppCompatActivity {
     public void calculateKeyDistances(ArrayList<CustomKey> keys){
         Log.d("ALLKEYDISTANCES", "Method called");
         int keyNumber = keys.size();
+        double min_val = 0;
+        double max_val = 1;
+        double var = 11.6;
+        double normalis = (max_val - min_val) / gaussianDist(0,var);
         for(int i = 0; i < keyNumber; i++)
         {
             CustomKey firstKey = keys.get(i);
             for (int j = 0; j<keyNumber; j++){
                 CustomKey secondKey = keys.get(j);
-                double dist = firstKey.distanceFrom(secondKey.getX(), secondKey.getY());
+                double dist = gaussianDist(firstKey.distanceFrom(secondKey.getX(), secondKey.getY()), var) * normalis;
                 keyDistances[firstKey.getLabel().charAt(0) - 'a'][secondKey.getLabel().charAt(0) - 'a'] = dist;
             }
         }
